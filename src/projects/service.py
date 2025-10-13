@@ -8,7 +8,10 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
         name=project_data.name,
         tagline=project_data.tagline,
         stage=project_data.stage,
-        founder_id=founder.id
+        founder_id=founder.id,
+        description=project_data.description,
+        logo_url=project_data.logo_url,
+        website_url=project_data.website_url
     )
     db.add(db_project)
     db.flush() # lấy project.id cho các section
