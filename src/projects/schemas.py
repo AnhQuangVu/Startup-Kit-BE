@@ -23,8 +23,8 @@ class ProjectCreate(BaseModel):
     tagline: Optional[str] = Field(None, max_length=255)
     stage: ProjectStage = ProjectStage.IDEA
     description: Optional[str] = Field(None, max_length=1000)
-    logo_url: Optional[HttpUrl] = None
-    website_url: Optional[HttpUrl] = None
+    logo_url: Optional[str] = None
+    website_url: Optional[str] = None
 
 class ProjectRead(BaseModel):
     id: int
