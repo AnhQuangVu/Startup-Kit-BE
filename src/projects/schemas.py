@@ -22,6 +22,9 @@ class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=100)
     tagline: Optional[str] = Field(None, max_length=255)
     stage: ProjectStage = ProjectStage.IDEA
+    description: Optional[str] = Field(None, max_length=1000)
+    logo_url: Optional[HttpUrl] = None
+    website_url: Optional[HttpUrl] = None
 
 class ProjectRead(BaseModel):
     id: int
