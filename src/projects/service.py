@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from . import schemas
 from src.database.models import User, Project, ProjectSection
 
@@ -38,10 +38,17 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
     return db_project
 
 def get_project_by_id(db: Session, project_id: int, user: User) -> Optional[Project]:
-    return db.query(Project).filter(Project.id == project_id, Project.founder_id == user.id).first()
+    return db.query(Project)\
+        .options(selectinload(Project.sections))\
+        .filter(Project.id == project_id, Project.founder_id == user.id)\
+        .first()
 
 def get_projects_by_founder(db: Session, founder_id: int) -> List[Project]:
-    return db.query(Project).filter(Project.founder_id == founder_id).order_by(Project.created_at.desc()).all()
+    return db.query(Project)\
+        .options(selectinload(Project.sections))\
+        .filter(Project.founder_id == founder_id)\
+        .order_by(Project.created_at.desc())\
+        .all()
 
 def get_project_section_by_id(db: Session, section_id: int, user: User) -> Optional[ProjectSection]:
     return db.query(ProjectSection).join(Project).filter(
