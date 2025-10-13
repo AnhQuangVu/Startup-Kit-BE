@@ -32,6 +32,9 @@ class ProjectRead(BaseModel):
     name: str
     tagline: Optional[str]
     stage: ProjectStage
+    description: Optional[str]
+    logo_url: Optional[str]
+    website_url: Optional[str]
     created_at: datetime
     updated_at: datetime
     sections: List[ProjectSectionRead]
