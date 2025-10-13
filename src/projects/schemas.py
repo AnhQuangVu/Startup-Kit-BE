@@ -25,6 +25,27 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = Field(None, max_length=1000)
     logo_url: Optional[str] = None
     website_url: Optional[str] = None
+    industry: Optional[str] = None
+    pain_point: Optional[str] = None
+    solution: Optional[str] = None
+    product: Optional[str] = None
+    customer_segment: Optional[str] = None
+    customer_features: Optional[str] = None
+    market_size: Optional[str] = None
+    market_area: Optional[str] = None
+    business_model: Optional[str] = None
+    revenue_method: Optional[str] = None
+    distribution_channel: Optional[str] = None
+    partners: Optional[str] = None
+    cost_estimate: Optional[str] = None
+    capital_source: Optional[str] = None
+    revenue_goal: Optional[str] = None
+    member_count: Optional[int] = None
+    member_skills: Optional[str] = None
+    resources: Optional[str] = None
+    team_image_url: Optional[str] = None
+    product_image_url: Optional[str] = None
+    use_ai: Optional[bool] = None
 
 class ProjectRead(BaseModel):
     id: int
@@ -35,6 +56,28 @@ class ProjectRead(BaseModel):
     description: Optional[str]
     logo_url: Optional[str]
     website_url: Optional[str]
+    # --- Các trường mới ---
+    industry: Optional[str]
+    pain_point: Optional[str]
+    solution: Optional[str]
+    product: Optional[str]
+    customer_segment: Optional[str]
+    customer_features: Optional[str]
+    market_size: Optional[str]
+    market_area: Optional[str]
+    business_model: Optional[str]
+    revenue_method: Optional[str]
+    distribution_channel: Optional[str]
+    partners: Optional[str]
+    cost_estimate: Optional[str]
+    capital_source: Optional[str]
+    revenue_goal: Optional[str]
+    member_count: Optional[int]
+    member_skills: Optional[str]
+    resources: Optional[str]
+    team_image_url: Optional[str]
+    product_image_url: Optional[str]
+    use_ai: Optional[bool]
     created_at: datetime
     updated_at: datetime
     sections: List[ProjectSectionRead]

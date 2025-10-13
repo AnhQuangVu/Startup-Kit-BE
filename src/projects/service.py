@@ -11,7 +11,28 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
         founder_id=founder.id,
         description=project_data.description,
         logo_url=project_data.logo_url,
-        website_url=project_data.website_url
+        website_url=project_data.website_url,
+        industry=project_data.industry,
+        pain_point=project_data.pain_point,
+        solution=project_data.solution,
+        product=project_data.product,
+        customer_segment=project_data.customer_segment,
+        customer_features=project_data.customer_features,
+        market_size=project_data.market_size,
+        market_area=project_data.market_area,
+        business_model=project_data.business_model,
+        revenue_method=project_data.revenue_method,
+        distribution_channel=project_data.distribution_channel,
+        partners=project_data.partners,
+        cost_estimate=project_data.cost_estimate,
+        capital_source=project_data.capital_source,
+        revenue_goal=project_data.revenue_goal,
+        member_count=project_data.member_count,
+        member_skills=project_data.member_skills,
+        resources=project_data.resources,
+        team_image_url=project_data.team_image_url,
+        product_image_url=project_data.product_image_url,
+        use_ai=project_data.use_ai
     )
     db.add(db_project)
     db.flush() # lấy project.id cho các section
