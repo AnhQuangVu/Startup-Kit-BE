@@ -29,7 +29,7 @@ def create_new_project(
     if current_user.role != 'founder':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only founders can create projects."
+            detail="Chỉ nhà sáng lập mới được phép tạo dự án."
         )
     return service.create_project(db=db, founder=current_user, project_data=project)
 
@@ -48,7 +48,7 @@ def read_project_details(
 ):
     project = service.get_project_by_id(db=db, project_id=project_id, user=current_user)
     if not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Không tìm thấy dự án.")
     return project
 
 
@@ -82,3 +82,38 @@ async def websocket_endpoint(
         print(f"Client disconnected from section {section_id}")
     finally:
         db.close()
+
+
+@router.put("/{project_id}", response_model=schemas.ProjectRead)
+def update_project_info(
+    project_id: int,
+    update_data: schemas.ProjectUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = service.update_project(db=db, founder=current_user, project_id=project_id, update_data=update_data)
+    if not project:
+        raise HTTPException(status_code=404, detail="Không tìm thấy dự án hoặc bạn không có quyền chỉnh sửa.")
+    return project
+
+@router.get("/search", response_model=List[schemas.ProjectRead])
+def search_projects(
+    query: str,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    results = service.search_projects(db=db, founder_id=current_user.id, query=query)
+    if not results:
+        raise HTTPException(status_code=404, detail="Không tìm thấy dự án phù hợp.")
+    return results
+
+@router.delete("/{project_id}", response_model=schemas.ProjectRead)
+def delete_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    project = service.soft_delete_project(db=db, founder=current_user, project_id=project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Không tìm thấy dự án hoặc bạn không có quyền xoá.")
+    return project

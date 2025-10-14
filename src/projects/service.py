@@ -1,5 +1,5 @@
 from typing import List, Optional
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from . import schemas
 from src.database.models import User, Project, ProjectSection
 
@@ -8,7 +8,32 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
         name=project_data.name,
         tagline=project_data.tagline,
         stage=project_data.stage,
-        founder_id=founder.id
+        founder_id=founder.id,
+        description=project_data.description,
+        logo_url=project_data.logo_url,
+        website_url=project_data.website_url,
+        industry=project_data.industry,
+        pain_point=project_data.pain_point,
+        solution=project_data.solution,
+        product=project_data.product,
+        customer_segment=project_data.customer_segment,
+        customer_features=project_data.customer_features,
+        market_size=project_data.market_size,
+        market_area=project_data.market_area,
+        business_model=project_data.business_model,
+        revenue_method=project_data.revenue_method,
+        distribution_channel=project_data.distribution_channel,
+        partners=project_data.partners,
+        cost_estimate=project_data.cost_estimate,
+        capital_source=project_data.capital_source,
+        revenue_goal=project_data.revenue_goal,
+        member_count=project_data.member_count,
+        member_skills=project_data.member_skills,
+        resources=project_data.resources,
+        team_image_url=project_data.team_image_url,
+        product_image_url=project_data.product_image_url,
+        use_ai=project_data.use_ai,
+        deployment_location=project_data.deployment_location
     )
     db.add(db_project)
     db.flush() # lấy project.id cho các section
@@ -35,10 +60,17 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
     return db_project
 
 def get_project_by_id(db: Session, project_id: int, user: User) -> Optional[Project]:
-    return db.query(Project).filter(Project.id == project_id, Project.founder_id == user.id).first()
+    return db.query(Project)\
+        .options(selectinload(Project.sections))\
+        .filter(Project.id == project_id, Project.founder_id == user.id)\
+        .first()
 
 def get_projects_by_founder(db: Session, founder_id: int) -> List[Project]:
-    return db.query(Project).filter(Project.founder_id == founder_id).order_by(Project.created_at.desc()).all()
+    return db.query(Project)\
+        .options(selectinload(Project.sections))\
+        .filter(Project.founder_id == founder_id, Project.is_deleted == False)\
+        .order_by(Project.created_at.desc())\
+        .all()
 
 def get_project_section_by_id(db: Session, section_id: int, user: User) -> Optional[ProjectSection]:
     return db.query(ProjectSection).join(Project).filter(
@@ -56,3 +88,40 @@ def update_project_section(db: Session, section: ProjectSection, update_data: sc
     db.commit()
     db.refresh(section)
     return section
+
+def update_project(db: Session, founder: User, project_id: int, update_data: schemas.ProjectUpdate) -> Optional[Project]:
+    project = db.query(Project).filter(Project.id == project_id, Project.founder_id == founder.id).first()
+    if not project:
+        return None
+    for field, value in update_data.dict(exclude_unset=True).items():
+        setattr(project, field, value)
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+def soft_delete_project(db: Session, founder: User, project_id: int) -> Optional[Project]:
+    project = db.query(Project).filter(Project.id == project_id, Project.founder_id == founder.id, Project.is_deleted == False).first()
+    if not project:
+        return None
+    project.is_deleted = True
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+def search_projects(db: Session, founder_id: int, query: str) -> List[Project]:
+    q = f"%{query.lower()}%"
+    return db.query(Project)\
+        .filter(
+            Project.founder_id == founder_id,
+            Project.is_deleted == False,
+            (
+                Project.name.ilike(q) |
+                Project.tagline.ilike(q) |
+                Project.description.ilike(q)
+            )
+        )\
+        .options(selectinload(Project.sections))\
+        .order_by(Project.created_at.desc())\
+        .all()

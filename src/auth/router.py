@@ -20,13 +20,13 @@ def register_user(user: user_schemas.UserCreate, db: Session = Depends(get_db)):
     if user.password != user.password_confirm:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Passwords do not match"
+            detail="Mật khẩu nhập lại không khớp."
         )
     db_user = user_service.get_user_by_email(db, email=user.email)
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered"
+            detail="Email đã được đăng ký."
         )
     return user_service.create_user(db=db, user=user)
 
@@ -35,13 +35,19 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     if len(form_data.password) > 72:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Password is too long. Maximum length is 72 characters."
+            detail="Mật khẩu quá dài. Độ dài tối đa là 72 ký tự."
         )
     user = user_service.get_user_by_email(db, email=form_data.username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Tài khoản không tồn tại.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     if not user.is_active or not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect email or password",
+            detail="Sai mật khẩu hoặc tài khoản đã bị khoá.",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
