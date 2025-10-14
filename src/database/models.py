@@ -123,8 +123,10 @@ class Project(Base):
     team_image_url = Column(String(512))
     product_image_url = Column(String(512))
     use_ai = Column(Boolean, default=False)
+    is_deleted = Column(Boolean, default=False)  # Trường xoá mềm
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    deployment_location = Column(String(255))
 
     founder = relationship("User", back_populates="projects")
     sections = relationship("ProjectSection", back_populates="project", cascade="all, delete-orphan")

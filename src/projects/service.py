@@ -32,7 +32,8 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
         resources=project_data.resources,
         team_image_url=project_data.team_image_url,
         product_image_url=project_data.product_image_url,
-        use_ai=project_data.use_ai
+        use_ai=project_data.use_ai,
+        deployment_location=project_data.deployment_location
     )
     db.add(db_project)
     db.flush() # lấy project.id cho các section
@@ -67,7 +68,7 @@ def get_project_by_id(db: Session, project_id: int, user: User) -> Optional[Proj
 def get_projects_by_founder(db: Session, founder_id: int) -> List[Project]:
     return db.query(Project)\
         .options(selectinload(Project.sections))\
-        .filter(Project.founder_id == founder_id)\
+        .filter(Project.founder_id == founder_id, Project.is_deleted == False)\
         .order_by(Project.created_at.desc())\
         .all()
 
@@ -87,3 +88,40 @@ def update_project_section(db: Session, section: ProjectSection, update_data: sc
     db.commit()
     db.refresh(section)
     return section
+
+def update_project(db: Session, founder: User, project_id: int, update_data: schemas.ProjectUpdate) -> Optional[Project]:
+    project = db.query(Project).filter(Project.id == project_id, Project.founder_id == founder.id).first()
+    if not project:
+        return None
+    for field, value in update_data.dict(exclude_unset=True).items():
+        setattr(project, field, value)
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+def soft_delete_project(db: Session, founder: User, project_id: int) -> Optional[Project]:
+    project = db.query(Project).filter(Project.id == project_id, Project.founder_id == founder.id, Project.is_deleted == False).first()
+    if not project:
+        return None
+    project.is_deleted = True
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return project
+
+def search_projects(db: Session, founder_id: int, query: str) -> List[Project]:
+    q = f"%{query.lower()}%"
+    return db.query(Project)\
+        .filter(
+            Project.founder_id == founder_id,
+            Project.is_deleted == False,
+            (
+                Project.name.ilike(q) |
+                Project.tagline.ilike(q) |
+                Project.description.ilike(q)
+            )
+        )\
+        .options(selectinload(Project.sections))\
+        .order_by(Project.created_at.desc())\
+        .all()

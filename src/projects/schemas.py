@@ -46,6 +46,8 @@ class ProjectCreate(BaseModel):
     team_image_url: Optional[str] = None
     product_image_url: Optional[str] = None
     use_ai: Optional[bool] = None
+    is_deleted: Optional[bool] = False  # Trường xoá mềm
+    deployment_location: Optional[str] = None
 
 class ProjectRead(BaseModel):
     id: int
@@ -81,6 +83,39 @@ class ProjectRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     sections: List[ProjectSectionRead]
+    is_deleted: Optional[bool] = False  # Trường xoá mềm
+    deployment_location: Optional[str]
 
     class Config:
         from_attributes = True
+
+class ProjectUpdate(BaseModel):
+    name: Optional[str] = None
+    tagline: Optional[str] = None
+    stage: Optional[ProjectStage] = None
+    description: Optional[str] = None
+    logo_url: Optional[str] = None
+    website_url: Optional[str] = None
+    industry: Optional[str] = None
+    pain_point: Optional[str] = None
+    solution: Optional[str] = None
+    product: Optional[str] = None
+    customer_segment: Optional[str] = None
+    customer_features: Optional[str] = None
+    market_size: Optional[str] = None
+    market_area: Optional[str] = None
+    business_model: Optional[str] = None
+    revenue_method: Optional[str] = None
+    distribution_channel: Optional[str] = None
+    partners: Optional[str] = None
+    cost_estimate: Optional[str] = None
+    capital_source: Optional[str] = None
+    revenue_goal: Optional[str] = None
+    member_count: Optional[int] = None
+    member_skills: Optional[str] = None
+    resources: Optional[str] = None
+    team_image_url: Optional[str] = None
+    product_image_url: Optional[str] = None
+    use_ai: Optional[bool] = None
+    is_deleted: Optional[bool] = None
+    deployment_location: Optional[str] = None
