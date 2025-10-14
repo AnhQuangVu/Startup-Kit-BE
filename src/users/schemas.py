@@ -23,6 +23,12 @@ class UserCreate(BaseModel):  # Đăng ký người dùng
     password: str = Field(..., min_length=6, max_length=72)
     password_confirm: str
     role: UserRole
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
 
 class UserRead(BaseModel):  # Đọc thông tin người dùng
     id: int
@@ -31,6 +37,12 @@ class UserRead(BaseModel):  # Đọc thông tin người dùng
     role: UserRole
     is_active: bool
     created_at: datetime
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
     profile: UserProfileRead
 
     class Config:
@@ -42,7 +54,12 @@ class UserUpdate(BaseModel):  # Cập nhật thông tin người dùng
     bio: Optional[str] = None
     website_url: Optional[HttpUrl] = None
     location: Optional[str] = None
-    
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+
 class UserPasswordUpdate(BaseModel):  # Cập nhật mật khẩu
     current_password: str
     new_password: str = Field(..., min_length=6, max_length=72)
