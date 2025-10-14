@@ -73,7 +73,12 @@ class UserProfile(Base):
     bio = Column(Text)
     website_url = Column(String(512))
     location = Column(String(255))
-    
+    phone = Column(String(20))
+    address = Column(String(255))
+    company = Column(String(255))
+    facebook = Column(String(255))
+    linkedin = Column(String(255))
+
     user = relationship("User", back_populates="profile")
 
     def __repr__(self):
