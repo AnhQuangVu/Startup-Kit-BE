@@ -1,57 +1,37 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  # MySQL Database
   db:
     image: mysql:8.0
-    container_name: startup_kit_db
-    restart: unless-stopped
+    container_name: mysql_db
+    restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-startup_kit}
-      MYSQL_USER: ${MYSQL_USER:-appuser}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-apppassword}
+      MYSQL_ROOT_PASSWORD: Dang04072004
+      MYSQL_DATABASE: startupkit
+      MYSQL_USER: dang
+      MYSQL_PASSWORD: Dang04072004
     ports:
-      - "${MYSQL_PORT:-3306}:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
-      - app-network
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - backend
 
-  # FastAPI Application
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: startup_kit_app
-    restart: unless-stopped
+  web:
+    build: .
+    container_name: fastapi_app
+    restart: always
+    env_file:
+      - .env
     ports:
-      - "${APP_PORT:-8000}:8000"
-    environment:
-      - DATABASE_URL=mysql+mysqlconnector://${MYSQL_USER:-appuser}:${MYSQL_PASSWORD:-apppassword}@db:3306/${MYSQL_DATABASE:-startup_kit}
-      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
-      - ALGORITHM=${ALGORITHM:-HS256}
-      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - "8003:8003"
     depends_on:
-      db:
-        condition: service_healthy
+      - db
     networks:
-      - app-network
-    volumes:
-      # Mount code for development (comment out in production)
-      - ./src:/app/src
-    command: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-
-networks:
-  app-network:
-    driver: bridge
+      - backend
 
 volumes:
   mysql_data:
-    driver: local
+
+networks:
+  backend:
