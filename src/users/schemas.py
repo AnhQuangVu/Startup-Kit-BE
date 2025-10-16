@@ -6,10 +6,15 @@ from src.database.models import UserRole
 
 
 class UserProfileBase(BaseModel):
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
     bio: Optional[str] = None
-    website_url: Optional[HttpUrl] = None
+    website_url: Optional[str] = None
     location: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
 
 class UserProfileRead(UserProfileBase):
     user_id: int
@@ -38,11 +43,16 @@ class UserRead(BaseModel):  # Đọc thông tin người dùng
         
 class UserUpdate(BaseModel):  # Cập nhật thông tin người dùng
     full_name: Optional[str] = Field(None, min_length=3, max_length=50)
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
     bio: Optional[str] = None
-    website_url: Optional[HttpUrl] = None
+    website_url: Optional[str] = None
     location: Optional[str] = None
-    
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+
 class UserPasswordUpdate(BaseModel):  # Cập nhật mật khẩu
     current_password: str
     new_password: str = Field(..., min_length=6, max_length=72)
