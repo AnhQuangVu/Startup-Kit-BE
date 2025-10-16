@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any
 from datetime import datetime
 from src.database.models import ProjectStage
@@ -8,7 +8,7 @@ class ProjectSectionRead(BaseModel):
     type: str
     title: str
     content: Optional[dict] = None
-    file_url: Optional[HttpUrl] = None
+    file_url: Optional[str] = None
     updated_at: datetime
 
     class Config:
@@ -21,7 +21,7 @@ class ProjectSectionUpdateWS(BaseModel):
 class ProjectCreate(BaseModel):
     name: str = Field(..., min_length=3, max_length=100)
     tagline: Optional[str] = Field(None, max_length=255)
-    stage: ProjectStage = ProjectStage.IDEA
+    stage: ProjectStage = ProjectStage.Y_TUONG
     description: Optional[str] = Field(None, max_length=1000)
     logo_url: Optional[str] = None
     website_url: Optional[str] = None

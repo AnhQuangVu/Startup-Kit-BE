@@ -19,11 +19,12 @@ class ConnectionStatus(str, enum.Enum):
     REJECTED = "rejected"
 
 class ProjectStage(str, enum.Enum):
-    IDEA = "idea"
-    PROTOTYPE = "prototype"
-    SEED = "seed"
-    SERIES_A = "series_a"
-    
+    Y_TUONG = "y-tuong"
+    NGHIEN_CUU_THI_TRUONG = "nghien-cuu-thi-truong"
+    HOAN_THIEN_SAN_PHAM = "hoan-thien-san-pham"
+    KHAO_SAT = "khao-sat"
+    LAUNCH = "launch"
+
 class NotificationType(str, enum.Enum):
     NEW_CONNECTION_REQUEST = "new_connection_request"
     CONNECTION_ACCEPTED = "connection_accepted"
@@ -67,17 +68,18 @@ class User(Base):
 
 class UserProfile(Base):
     __tablename__ = "user_profiles"
-    
-    user_id = Column(Integer, ForeignKey('users.id'), primary_key=True)
-    avatar_url = Column(String(512))
-    bio = Column(Text)
-    website_url = Column(String(512))
-    location = Column(String(255))
-    phone = Column(String(20))
-    address = Column(String(255))
-    company = Column(String(255))
-    facebook = Column(String(255))
-    linkedin = Column(String(255))
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True)
+    avatar_url = Column(String(255), nullable=True)
+    bio = Column(Text, nullable=True)
+    website_url = Column(String(255), nullable=True)
+    location = Column(String(255), nullable=True)
+    phone = Column(String(50), nullable=True)
+    address = Column(String(255), nullable=True)
+    company = Column(String(255), nullable=True)
+    facebook = Column(String(255), nullable=True)
+    linkedin = Column(String(255), nullable=True)
 
     user = relationship("User", back_populates="profile")
 
@@ -127,6 +129,7 @@ class Project(Base):
     resources = Column(Text)
     team_image_url = Column(String(512))
     product_image_url = Column(String(512))
+    pdf_url = Column(String(512), nullable=True)
     use_ai = Column(Boolean, default=False)
     is_deleted = Column(Boolean, default=False)  # Trường xoá mềm
     created_at = Column(DateTime(timezone=True), server_default=func.now())
