@@ -55,6 +55,26 @@ def create_project(db: Session, founder: User, project_data: schemas.ProjectCrea
         )
         db.add(section)
 
+    bmc_table = [
+        {"block": "Key Partners", "value": project_data.partners or ""},
+        {"block": "Key Activities", "value": project_data.business_model or ""},
+        {"block": "Key Resources", "value": project_data.resources or ""},
+        {"block": "Value Propositions", "value": project_data.solution or ""},
+        {"block": "Customer Relationships", "value": project_data.customer_features or ""},
+        {"block": "Channels", "value": project_data.distribution_channel or ""},
+        {"block": "Customer Segments", "value": project_data.customer_segment or ""},
+        {"block": "Cost Structure", "value": project_data.cost_estimate or ""},
+        {"block": "Revenue Streams", "value": project_data.revenue_method or ""},
+    ]
+
+    bmc_section = None
+    for section in db_project.sections if hasattr(db_project, 'sections') else db.query(ProjectSection).filter_by(project_id=db_project.id).all():
+        if section.type == "BUSINESS_MODEL_CANVAS":
+            bmc_section = section
+            break
+    if bmc_section:
+        bmc_section.content = bmc_table
+
     db.commit()
     db.refresh(db_project)
     return db_project
