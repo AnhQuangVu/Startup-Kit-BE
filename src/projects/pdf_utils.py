@@ -1,14 +1,11 @@
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
-from reportlab.lib.colors import Color, HexColor
+from reportlab.lib.colors import HexColor
 import os
 from src.projects.schemas import ProjectRead
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Paragraph
-from reportlab.lib.enums import TA_LEFT
 
 
 def wrap_text(c, text, x, y, max_width, font_name, font_size, line_height=12):
@@ -129,144 +126,176 @@ def create_project_pdf(project: ProjectRead, output_path: str, watermark_path: s
                                                            dict) and "table" in bmc_section.content else bmc_section.content
         block_map = {row["block"]: row["value"] for row in table}
 
-        # Tạo trang mới với landscape
+        # Normalize keys for more robust lookup (case-insensitive, trimmed)
+        normalized = {k.lower().strip(): v for k, v in block_map.items()}
+
+        def get_block(*aliases):
+            for a in aliases:
+                key = a.lower().strip()
+                if key in normalized:
+                    return normalized[key]
+            return ""
+
+        # Start a new page for the canvas and set to landscape A4
         c.showPage()
         c.setPageSize(landscape(A4))
         page_width, page_height = landscape(A4)
 
-        # Màu sắc
+        # Colors
         border_color = HexColor("#999999")
         title_color = HexColor("#333333")
         subtitle_color = HexColor("#666666")
 
-        # Thiết lập vùng vẽ
-        margin = 25
-        canvas_width = page_width - 2 * margin
-        canvas_height = page_height - 110
-        top = page_height - 50
+        # Layout margins and drawing area
+        margin = 22
+        gap = 6  # gap between columns/rows
         left = margin
+        right = page_width - margin
+        top = page_height - margin
+        bottom = margin
+        canvas_width = right - left
+        canvas_height = top - bottom
 
-        # --- Lean Canvas layout: Professional, Centered UVP ---
-        # Kích thước và vị trí các block
-        margin = 25
-        page_width, page_height = landscape(A4)
-        canvas_width = page_width - 2 * margin
-        canvas_height = page_height - 110
-        top = page_height - 50
-        left = margin
+        # Compute unit width for a 6-column grid where UVP spans two units
+        unit_w = (canvas_width - gap * 5) / 6.0
 
-        # Chiều cao các hàng
-        row1_h = canvas_height * 0.36
-        row2_h = canvas_height * 0.18
-        row3_h = canvas_height * 0.22
-        gap = 6  # khoảng cách giữa các block
+        # Column x positions
+        col_x = [left + i * (unit_w + gap) for i in range(6)]
 
-        # Chiều rộng các cột
-        col_w = canvas_width / 6
-        uvp_w = col_w * 2
-        cost_w = canvas_width / 2
-        revenue_w = canvas_width / 2
+        # Column widths (single unit); UVP will span two units
+        col_w = unit_w
+        uvp_w = unit_w * 2 + gap
+
+        # Row heights (three rows) - tuned so content fits comfortably on a single page
+        row1_h = canvas_height * 0.48
+        row2_h = canvas_height * 0.30
+        row3_h = canvas_height * 0.20
+
+        # Small helper to draw text wrapped inside a width/height area
+        def draw_wrapped_text(x, y_top, w, h, text, font_name="DejaVuSerif", font_size=8, leading=10, left_padding=6):
+            if not text:
+                return
+            c.setFont(font_name, font_size)
+            available_width = w - left_padding - 6
+            # build words
+            lines = []
+            for paragraph in str(text).split('\n'):
+                words = paragraph.split()
+                if not words:
+                    lines.append("")
+                    continue
+                cur = words[0]
+                for word in words[1:]:
+                    test = cur + ' ' + word
+                    if c.stringWidth(test, font_name, font_size) <= available_width:
+                        cur = test
+                    else:
+                        lines.append(cur)
+                        cur = word
+                lines.append(cur)
+
+            max_lines = int((h - 6) / leading)
+            y = y_top
+            drawn = 0
+            for line in lines:
+                if drawn >= max_lines:
+                    break
+                c.drawString(x + left_padding, y, line)
+                y -= leading
+                drawn += 1
 
         def draw_lean_cell(x, y, w, h, title, subtitle, content):
-            """Vẽ một ô Lean Canvas với border và nội dung"""
-            # Vẽ border
+            """Draw a cell with title/subtitle/content. Coordinates: x,y is bottom-left."""
+            # Outer border
             c.setStrokeColor(border_color)
             c.setLineWidth(0.8)
             c.rect(x, y, w, h, fill=0, stroke=1)
 
-            # Vẽ tiêu đề
+            # Title
+            title_y = y + h - 12
             c.setFillColor(title_color)
             c.setFont(bold_font, 10)
-            title_y = y + h - 15
             c.drawString(x + 6, title_y, title)
 
-            # Vẽ subtitle nếu có
-            content_start_y = title_y - 12
+            # Subtitle (small)
+            sub_start_y = title_y - 12
             if subtitle:
                 c.setFont("DejaVuSerif", 7)
                 c.setFillColor(subtitle_color)
-                # Wrap subtitle
-                sub_lines = subtitle.split('\n')
-                for i, sub_line in enumerate(sub_lines):
-                    if i > 2:  # Giới hạn 3 dòng subtitle
-                        break
-                    c.drawString(x + 6, content_start_y - i * 9, sub_line)
-                content_start_y -= (len(sub_lines[:3]) * 9 + 5)
-
-            # Vẽ nội dung
-            if content:
-                c.setFillColor(HexColor("#000000"))
-                c.setFont("DejaVuSerif", 8)
-
-                # Tính toán không gian còn lại
-                available_height = content_start_y - y - 8
-                line_height = 10
-                max_lines = int(available_height / line_height)
-
-                # Xử lý nội dung
-                lines = str(content).split('\n')
-                content_y = content_start_y
-                lines_drawn = 0
-
-                for line in lines:
-                    if lines_drawn >= max_lines:
-                        break
-
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    # Tính độ rộng tối đa cho text (trừ padding)
-                    max_width = w - 16
-
-                    # Wrap dòng dài
-                    words = line.split()
-                    current_line = ""
-
-                    for word in words:
-                        test_line = current_line + word + " "
-                        if c.stringWidth(test_line, "DejaVuSerif", 8) <= max_width:
-                            current_line = test_line
+                # wrap subtitle to max 3 lines
+                sub_lines = []
+                for p in str(subtitle).split('\n'):
+                    words = p.split()
+                    cur = ''
+                    for wword in words:
+                        test = (cur + ' ' + wword).strip()
+                        if c.stringWidth(test, "DejaVuSerif", 7) <= w - 12:
+                            cur = test
                         else:
-                            if current_line:
-                                c.drawString(x + 8, content_y, current_line.strip())
-                                content_y -= line_height
-                                lines_drawn += 1
-                                if lines_drawn >= max_lines:
-                                    break
-                            current_line = word + " "
+                            sub_lines.append(cur)
+                            cur = wword
+                    if cur:
+                        sub_lines.append(cur)
+                for i, sl in enumerate(sub_lines[:3]):
+                    c.drawString(x + 6, sub_start_y - i * 9, sl)
+                content_start_y = sub_start_y - (len(sub_lines[:3]) * 9 + 6)
+            else:
+                content_start_y = sub_start_y
 
-                    if current_line and lines_drawn < max_lines:
-                        c.drawString(x + 8, content_y, current_line.strip())
-                        content_y -= line_height
-                        lines_drawn += 1
+            # Content area
+            content_h = content_start_y - (y + 6)
+            if content_h > 8 and content:
+                c.setFillColor(HexColor("#000000"))
+                # use slightly smaller font for dense cells
+                draw_wrapped_text(x, content_start_y, w, content_h, content, font_name="DejaVuSerif", font_size=8, leading=9)
 
-        # HÀNG 1: Problem | Solution | Unique Value Proposition (2 col) | Unfair Advantage | Customer Segments
-        y1 = top
-        x = left
-        draw_lean_cell(x, y1 - row1_h, col_w, row1_h, "Problem", "Top 3 problems", block_map.get("Problem", ""))
-        draw_lean_cell(x + col_w + gap, y1 - row1_h, col_w, row1_h, "Solution", "Top 3 features", block_map.get("Solution", ""))
-        draw_lean_cell(x + 2*col_w + 2*gap, y1 - row1_h, uvp_w - gap, row1_h, "Unique Value Proposition", "Single, clear, compelling message that states why you are different and worth buying", block_map.get("Unique Value Proposition", ""))
-        draw_lean_cell(x + 4*col_w + 3*gap, y1 - row1_h, col_w, row1_h, "Unfair Advantage", "Can't be easily copied or bought", block_map.get("Unfair Advantage", ""))
-        draw_lean_cell(x + 5*col_w + 4*gap, y1 - row1_h, col_w, row1_h, "Customer Segments", "Target customers", block_map.get("Customer Segments", ""))
+        # Fetch blocks with common alias names (support different naming)
+        P = get_block('Problem', 'Problems', 'Problems/Needs')
+        S = get_block('Solution', 'Solutions')
+        UVP = get_block('Unique Value Proposition', 'Unique Value', 'Value Proposition', 'UVP')
+        UA = get_block('Unfair Advantage', 'Unfair Advantage/Edge')
+        CS = get_block('Customer Segments', 'Customers', 'Customer Segment')
 
-        # HÀNG 2: Existing Alternatives | Key Metrics | High-Level Concept | Channels | Early Adopters
-        y2 = y1 - row1_h - gap
-        draw_lean_cell(x, y2 - row2_h, col_w, row2_h, "Existing Alternatives", "", block_map.get("Existing Alternatives", ""))
-        draw_lean_cell(x + col_w + gap, y2 - row2_h, col_w, row2_h, "Key Metrics", "Key activities you measure", block_map.get("Key Metrics", ""))
-        draw_lean_cell(x + 2*col_w + 2*gap, y2 - row2_h, uvp_w - gap, row2_h, "High-Level Concept", "", block_map.get("High-Level Concept", ""))
-        draw_lean_cell(x + 4*col_w + 3*gap, y2 - row2_h, col_w, row2_h, "Channels", "Path to customers", block_map.get("Channels", ""))
-        draw_lean_cell(x + 5*col_w + 4*gap, y2 - row2_h, col_w, row2_h, "Early Adopters", "", block_map.get("Early Adopters", ""))
+        EA = get_block('Existing Alternatives', 'Existing Alternatives/Competitors', 'Alternatives')
+        KM = get_block('Key Metrics', 'Key Metrics/Measures')
+        HLC = get_block('High-Level Concept', 'High-Level Concept/Concept')
+        CH = get_block('Channels', 'Distribution Channel', 'Channel')
+        EA2 = get_block('Early Adopters', 'Early Adopter', 'Initial Users')
 
-        # HÀNG 3: Cost Structure | Revenue Streams
-        y3 = y2 - row2_h - gap
-        draw_lean_cell(x, y3 - row3_h, cost_w - gap//2, row3_h, "Cost Structure", "Customer acquisition costs, Distribution costs, Hosting, People, etc.", block_map.get("Cost Structure", ""))
-        draw_lean_cell(x + cost_w + gap//2, y3 - row3_h, revenue_w - gap//2, row3_h, "Revenue Streams", "Revenue model, Life time value, Revenue, Gross margin", block_map.get("Revenue Streams", ""))
+        COST = get_block('Cost Structure', 'Costs', 'Cost')
+        REV = get_block('Revenue Streams', 'Revenue', 'Revenue Model')
+
+        # Row 1: Problem | Solution | UVP (2 units) | Unfair Advantage | Customer Segments
+        y1_bottom = top - row1_h
+        # Problem
+        draw_lean_cell(col_x[0], y1_bottom, col_w, row1_h, "Problem", "Top 3 problems", P)
+        # Solution
+        draw_lean_cell(col_x[1], y1_bottom, col_w, row1_h, "Solution", "Top 3 features", S)
+        # UVP spans columns 2 and 3
+        draw_lean_cell(col_x[2], y1_bottom, uvp_w, row1_h, "Unique Value Proposition", "Single, clear, compelling message that states why you are different and worth buying", UVP)
+        # Unfair Advantage (column 4)
+        draw_lean_cell(col_x[4], y1_bottom, col_w, row1_h, "Unfair Advantage", "Can't be easily copied or bought", UA)
+        # Customer Segments (column 5)
+        draw_lean_cell(col_x[5], y1_bottom, col_w, row1_h, "Customer Segments", "Target customers", CS)
+
+        # Row 2: Existing Alternatives | Key Metrics | High-Level Concept (spans 2 units) | Channels | Early Adopters
+        y2_bottom = y1_bottom - gap - row2_h
+        draw_lean_cell(col_x[0], y2_bottom, col_w, row2_h, "Existing Alternatives", "", EA)
+        draw_lean_cell(col_x[1], y2_bottom, col_w, row2_h, "Key Metrics", "Key activities you measure", KM)
+        draw_lean_cell(col_x[2], y2_bottom, uvp_w, row2_h, "High-Level Concept", "", HLC)
+        draw_lean_cell(col_x[4], y2_bottom, col_w, row2_h, "Channels", "Path to customers", CH)
+        draw_lean_cell(col_x[5], y2_bottom, col_w, row2_h, "Early Adopters", "", EA2)
+
+        # Row 3: Cost Structure | Revenue Streams (each half width)
+        y3_bottom = y2_bottom - gap - row3_h
+        half_w = (canvas_width - gap) / 2.0
+        draw_lean_cell(left, y3_bottom, half_w, row3_h, "Cost Structure", "Customer acquisition costs, Distribution costs, Hosting, People, etc.", COST)
+        draw_lean_cell(left + half_w + gap, y3_bottom, half_w, row3_h, "Revenue Streams", "Revenue model, Life time value, Revenue, Gross margin", REV)
 
         # Footer
         c.setFont("DejaVuSerif", 7)
         c.setFillColor(subtitle_color)
-        footer_y = y3 - row3_h - 12
+        footer_y = y3_bottom - 12
         c.drawString(left, footer_y, "Lean Canvas - Startup Kit")
 
     c.save()

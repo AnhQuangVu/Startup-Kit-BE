@@ -2,10 +2,12 @@ from src.projects.schemas import ProjectCreate, ProjectRead, ProjectSectionRead
 from src.projects.pdf_utils import create_project_pdf
 from src.database.models import ProjectStage
 from datetime import datetime
+import os
 
 # Tạo dữ liệu project mẫu
 project_data = ProjectCreate(
-    name="Dự án Khởi nghiệp A",
+    name="Dự án Khởi nghiệp A ",
+
     tagline="Giải pháp đổi mới cho thị trường Việt Nam",
     stage=ProjectStage.Y_TUONG,
     description="Đây là mô tả chi tiết về dự án khởi nghiệp A.",
@@ -34,15 +36,20 @@ project_data = ProjectCreate(
 
 # Tạo section BMC dạng bảng
 bmc_table = [
-    {"block": "Key Partners", "value": project_data.partners or ""},
-    {"block": "Key Activities", "value": project_data.business_model or ""},
-    {"block": "Key Resources", "value": project_data.resources or ""},
-    {"block": "Value Propositions", "value": project_data.solution or ""},
-    {"block": "Customer Relationships", "value": project_data.customer_features or ""},
-    {"block": "Channels", "value": project_data.distribution_channel or ""},
-    {"block": "Customer Segments", "value": project_data.customer_segment or ""},
-    {"block": "Cost Structure", "value": project_data.cost_estimate or ""},
-    {"block": "Revenue Streams", "value": project_data.revenue_method or ""},
+    {"block": "Problem", "value": "1) Doanh nghiệp vừa và nhỏ thiếu công cụ quản lý quy trình; 2) Chi phí hiện tại cao; 3) Thiếu tự động hoá báo cáo"},
+    {"block": "Solution", "value": "Ứng dụng SaaS quản lý công việc + AI tự động hoá báo cáo và tối ưu hoá quy trình"},
+    {"block": "Unique Value Proposition", "value": "Tiết kiệm 30% thời gian quản lý nhờ tự động hoá và gợi ý AI, phù hợp cho SME tại Việt Nam"},
+    {"block": "Unfair Advantage", "value": "Mạng lưới đối tác triển khai, dữ liệu ngành riêng và mô hình AI được tinh chỉnh cho thị trường VN"},
+    {"block": "Customer Segments", "value": "Doanh nghiệp vừa và nhỏ (nhóm B2B), đặc biệt: bán lẻ, dịch vụ, sản xuất quy mô nhỏ"},
+
+    {"block": "Existing Alternatives", "value": "Excel + email, phần mềm CRM/ERP cồng kềnh, thuê tư vấn bên ngoài"},
+    {"block": "Key Metrics", "value": "Tỷ lệ chuyển đổi dùng thử -> trả phí, thời gian triển khai trung bình, NPS"},
+    {"block": "High-Level Concept", "value": "'Asana cho SME' với AI hỗ trợ tự động hoá quy trình"},
+    {"block": "Channels", "value": "Bán hàng trực tiếp B2B, Mạng đối tác triển khai, Marketing nội dung và webinar"},
+    {"block": "Early Adopters", "value": "Các doanh nghiệp bán lẻ chuỗi nhỏ, startups có 10-50 nhân sự"},
+
+    {"block": "Cost Structure", "value": "Chi phí phát triển, máy chủ, marketing, sale, hỗ trợ khách hàng"},
+    {"block": "Revenue Streams", "value": "Thu phí đăng ký theo người dùng / tháng, gói triển khai tích hợp một lần"},
 ]
 
 bmc_section = ProjectSectionRead(
@@ -93,7 +100,7 @@ project = ProjectRead(
 )
 
 # Tạo file PDF
-output_path = "project_demo.pdf"
-watermark_path = "static/logo.png"
+output_path = os.path.abspath("project_demo.pdf")
+watermark_path = os.path.abspath("static/logo.png")
 create_project_pdf(project, output_path, watermark_path)
 print(f"Đã tạo file PDF: {output_path}")
