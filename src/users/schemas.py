@@ -6,7 +6,7 @@ from src.database.models import UserRole
 
 
 class UserProfileBase(BaseModel):
-    avatar_url: Optional[str] = None
+    # avatar_url removed from profile to avoid duplication with top-level User.avatar_url
     bio: Optional[str] = None
     website_url: Optional[str] = None
     location: Optional[str] = None
@@ -42,11 +42,7 @@ class UserRead(BaseModel):  # Đọc thông tin người dùng
     role: UserRole
     is_active: bool
     created_at: datetime
-    phone: Optional[str] = None
-    address: Optional[str] = None
-    company: Optional[str] = None
-    facebook: Optional[str] = None
-    linkedin: Optional[str] = None
+    # NOTE: move contact fields into profile to avoid duplication; keep only avatar_url here if you want
     avatar_url: Optional[HttpUrl] = None
     profile: UserProfileRead
 
