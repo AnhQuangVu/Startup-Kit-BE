@@ -139,3 +139,98 @@ class ProjectRead(BaseModel):
     class Config:
         from_attributes = True
 
+
+# --- NEW SCHEMAS: members, posts, media, likes, comments, followers ---
+class ProjectMemberRead(BaseModel):
+    id: int
+    project_id: int
+    user_id: Optional[int] = None
+    name: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
+    role_in_project: Optional[str] = None
+    is_founder: Optional[bool] = False
+    joined_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectMemberCreate(BaseModel):
+    user_id: Optional[int] = None
+    name: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
+    role_in_project: Optional[str] = None
+    is_founder: Optional[bool] = False
+
+    class Config:
+        from_attributes = True
+
+class MediaItem(BaseModel):
+    url: HttpUrl
+    public_id: Optional[str] = None
+    media_type: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ProjectPostCreate(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    media: Optional[List[MediaItem]] = None
+    visibility: Optional[str] = "public"
+
+    class Config:
+        from_attributes = True
+
+class ProjectPostRead(BaseModel):
+    id: int
+    project_id: int
+    author_id: Optional[int] = None
+    title: Optional[str] = None
+    body: Optional[str] = None
+    visibility: Optional[str] = None
+    media: Optional[List[MediaItem]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PostLikeRead(BaseModel):
+    id: int
+    post_id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PostCommentCreate(BaseModel):
+    body: str
+    parent_comment_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class PostCommentRead(BaseModel):
+    id: int
+    post_id: int
+    author_id: int
+    body: str
+    parent_comment_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectFollowerRead(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectFollowCreate(BaseModel):
+    # empty body accepted; we only need current user in backend
+    pass

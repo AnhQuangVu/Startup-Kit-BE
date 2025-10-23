@@ -246,3 +246,145 @@ class Notification(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     recipient = relationship("User", back_populates="notifications")
+
+
+# --- MODULE: PROJECT MEMBERS / POSTS / MEDIA / FOLLOWERS ---
+class ProjectMember(Base):
+    __tablename__ = "project_members"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    name = Column(String(255), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
+    role_in_project = Column(String(100), nullable=True)
+    is_founder = Column(Boolean, default=False)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="members")
+    user = relationship("User", backref="project_members")
+
+    def __repr__(self):
+        return f"<ProjectMember(id={self.id}, project_id={self.project_id})>"
+
+
+class ProjectPost(Base):
+    __tablename__ = "project_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    title = Column(String(255), nullable=True)
+    body = Column(Text, nullable=True)
+    visibility = Column(String(50), default="public", index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    project = relationship("Project", backref="posts")
+    author = relationship("User", backref="posts")
+    media = relationship("PostMedia", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("PostComment", back_populates="post", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ProjectPost(id={self.id}, project_id={self.project_id})>"
+
+
+class PostMedia(Base):
+    __tablename__ = "post_media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    url = Column(String(1024), nullable=False)
+    public_id = Column(String(255), nullable=True)
+    media_type = Column(String(50), nullable=True)
+    order = Column(Integer, nullable=True)
+
+    post = relationship("ProjectPost", back_populates="media")
+
+    def __repr__(self):
+        return f"<PostMedia(id={self.id}, post_id={self.post_id})>"
+
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("ProjectPost", back_populates="likes")
+    user = relationship("User", backref="post_likes")
+
+    def __repr__(self):
+        return f"<PostLike(id={self.id}, post_id={self.post_id}, user_id={self.user_id})>"
+
+
+class PostComment(Base):
+    __tablename__ = "post_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    body = Column(Text, nullable=False)
+    parent_comment_id = Column(Integer, ForeignKey('post_comments.id'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("ProjectPost", back_populates="comments")
+    author = relationship("User", backref="post_comments")
+    parent = relationship("PostComment", remote_side=[id], backref="replies")
+
+    def __repr__(self):
+        return f"<PostComment(id={self.id}, post_id={self.post_id})>"
+
+
+class ProjectFollower(Base):
+    __tablename__ = "project_followers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="followers")
+    user = relationship("User", backref="followed_projects")
+
+    def __repr__(self):
+        return f"<ProjectFollower(id={self.id}, project_id={self.project_id}, user_id={self.user_id})>"
+
+
+class Media(Base):
+    __tablename__ = "media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    url = Column(String(1024), nullable=False)
+    public_id = Column(String(255), nullable=True)
+    type = Column(String(50), nullable=True)
+    uploaded_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="media_items")
+    uploader = relationship("User", backref="uploaded_media")
+
+    def __repr__(self):
+        return f"<Media(id={self.id}, url='{self.url}')>"
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    actor_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    type = Column(String(100), nullable=False)
+    payload = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="activities")
+    actor = relationship("User", backref="activities")
+
+    def __repr__(self):
+        return f"<ActivityLog(id={self.id}, type='{self.type}')>"
+

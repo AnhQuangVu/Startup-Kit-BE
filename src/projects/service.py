@@ -337,3 +337,160 @@ def update_project_section(db: Session, section: ProjectSection,
     db.commit()
     db.refresh(section)
     return section
+
+
+from src.database.models import (
+    ProjectMember, ProjectPost, PostMedia, PostLike, PostComment, ProjectFollower, Media, ActivityLog
+)
+
+
+def add_project_member(db: Session, project_id: int, member_data: schemas.ProjectMemberCreate, added_by: Optional[User] = None):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+
+    pm = ProjectMember(
+        project_id=project_id,
+        user_id=getattr(member_data, 'user_id', None),
+        name=getattr(member_data, 'name', None),
+        avatar_url=str(getattr(member_data, 'avatar_url', None)) if getattr(member_data, 'avatar_url', None) else None,
+        role_in_project=getattr(member_data, 'role_in_project', None),
+        is_founder=getattr(member_data, 'is_founder', False)
+    )
+    db.add(pm)
+    db.commit()
+    db.refresh(pm)
+    # activity
+    try:
+        db.add(ActivityLog(project_id=project_id, actor_id=(added_by.id if added_by else None), type='member_added', payload={'member_id': pm.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return pm
+
+
+def get_project_members(db: Session, project_id: int):
+    return db.query(ProjectMember).filter(ProjectMember.project_id == project_id).order_by(ProjectMember.joined_at.asc()).all()
+
+
+def create_project_post(db: Session, project_id: int, author: User, post_data: schemas.ProjectPostCreate):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+
+    post = ProjectPost(
+        project_id=project_id,
+        author_id=(author.id if author else None),
+        title=getattr(post_data, 'title', None),
+        body=getattr(post_data, 'body', None),
+        visibility=getattr(post_data, 'visibility', 'public')
+    )
+    db.add(post)
+    db.flush()
+
+    # media
+    medias = getattr(post_data, 'media', None) or []
+    for idx, m in enumerate(medias):
+        url = m.url if hasattr(m, 'url') else m.get('url')
+        pm = PostMedia(post_id=post.id, url=str(url), public_id=getattr(m, 'public_id', None), media_type=getattr(m, 'media_type', None), order=idx)
+        db.add(pm)
+
+    db.commit()
+    db.refresh(post)
+
+    # log
+    try:
+        db.add(ActivityLog(project_id=project_id, actor_id=(author.id if author else None), type='post_created', payload={'post_id': post.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    return post
+
+
+def get_project_posts(db: Session, project_id: int, limit: int = 50):
+    return (
+        db.query(ProjectPost)
+        .filter(ProjectPost.project_id == project_id)
+        .order_by(ProjectPost.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+def get_post_by_id(db: Session, post_id: int):
+    return db.query(ProjectPost).filter(ProjectPost.id == post_id).first()
+
+
+def add_comment_to_post(db: Session, post_id: int, author: User, comment_data: schemas.PostCommentCreate):
+    post = get_post_by_id(db, post_id=post_id)
+    if not post:
+        raise ValueError("Post not found")
+    pc = PostComment(post_id=post_id, author_id=(author.id if author else None), body=comment_data.body, parent_comment_id=getattr(comment_data, 'parent_comment_id', None))
+    db.add(pc)
+    db.commit()
+    db.refresh(pc)
+    try:
+        db.add(ActivityLog(project_id=post.project_id, actor_id=(author.id if author else None), type='comment_created', payload={'post_id': post_id, 'comment_id': pc.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return pc
+
+
+def like_post(db: Session, post_id: int, user: User):
+    post = get_post_by_id(db, post_id=post_id)
+    if not post:
+        raise ValueError("Post not found")
+    # prevent duplicate likes
+    existing = db.query(PostLike).filter(PostLike.post_id == post_id, PostLike.user_id == user.id).first()
+    if existing:
+        return existing
+    pl = PostLike(post_id=post_id, user_id=user.id)
+    db.add(pl)
+    db.commit()
+    db.refresh(pl)
+    try:
+        db.add(ActivityLog(project_id=post.project_id, actor_id=user.id, type='post_liked', payload={'post_id': post_id, 'like_id': pl.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return pl
+
+
+def follow_project(db: Session, project_id: int, user: User):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+    existing = db.query(ProjectFollower).filter(ProjectFollower.project_id == project_id, ProjectFollower.user_id == user.id).first()
+    if existing:
+        return existing
+    pf = ProjectFollower(project_id=project_id, user_id=user.id)
+    db.add(pf)
+    db.commit()
+    db.refresh(pf)
+    # optional: update cached follower_count in Project.meta or column (not present by default)
+    try:
+        db.add(ActivityLog(project_id=project_id, actor_id=user.id, type='project_followed', payload={'follower_id': pf.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return pf
+
+
+def unfollow_project(db: Session, project_id: int, user: User):
+    existing = db.query(ProjectFollower).filter(ProjectFollower.project_id == project_id, ProjectFollower.user_id == user.id).first()
+    if not existing:
+        return None
+    db.delete(existing)
+    db.commit()
+    try:
+        db.add(ActivityLog(project_id=project_id, actor_id=user.id, type='project_unfollowed', payload={'user_id': user.id}))
+        db.commit()
+    except Exception:
+        db.rollback()
+    return existing
+
+
+def get_project_followers(db: Session, project_id: int, limit: int = 100):
+    return db.query(ProjectFollower).filter(ProjectFollower.project_id == project_id).order_by(ProjectFollower.created_at.desc()).limit(limit).all()

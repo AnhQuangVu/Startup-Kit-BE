@@ -168,3 +168,139 @@ async def websocket_endpoint(
         print(f"Client disconnected from section {section_id}")
     finally:
         db.close()
+
+
+# --- NEW API ENDPOINTS: members, posts, comments, likes, followers ---
+@router.post("/{project_id}/members", response_model=schemas.ProjectMemberRead, status_code=status.HTTP_201_CREATED)
+def add_member(
+        project_id: int,
+        member: schemas.ProjectMemberCreate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        pm = service.add_project_member(db=db, project_id=project_id, member_data=member, added_by=current_user)
+        return pm
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{project_id}/members", response_model=List[schemas.ProjectMemberRead])
+def list_members(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    return service.get_project_members(db=db, project_id=project_id)
+
+
+@router.post("/{project_id}/posts", response_model=schemas.ProjectPostRead, status_code=status.HTTP_201_CREATED)
+def create_post(
+        project_id: int,
+        post: schemas.ProjectPostCreate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        p = service.create_project_post(db=db, project_id=project_id, author=current_user, post_data=post)
+        return p
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{project_id}/posts", response_model=List[schemas.ProjectPostRead])
+def list_posts(
+        project_id: int,
+        limit: int = Query(50, ge=1, le=200),
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    return service.get_project_posts(db=db, project_id=project_id, limit=limit)
+
+
+@router.get("/posts/{post_id}", response_model=schemas.ProjectPostRead)
+def get_post(
+        post_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    post = service.get_post_by_id(db=db, post_id=post_id)
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    return post
+
+
+@router.post("/posts/{post_id}/comments", response_model=schemas.PostCommentRead, status_code=status.HTTP_201_CREATED)
+def comment_post(
+        post_id: int,
+        comment: schemas.PostCommentCreate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        pc = service.add_comment_to_post(db=db, post_id=post_id, author=current_user, comment_data=comment)
+        return pc
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/posts/{post_id}/like", response_model=schemas.PostLikeRead)
+def like_post(
+        post_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        pl = service.like_post(db=db, post_id=post_id, user=current_user)
+        return pl
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/{project_id}/follow", response_model=schemas.ProjectFollowerRead, status_code=status.HTTP_201_CREATED)
+def follow_project(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        pf = service.follow_project(db=db, project_id=project_id, user=current_user)
+        return pf
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{project_id}/follow", status_code=status.HTTP_204_NO_CONTENT)
+def unfollow_project(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        res = service.unfollow_project(db=db, project_id=project_id, user=current_user)
+        if res is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Follow record not found")
+        return
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{project_id}/followers", response_model=List[schemas.ProjectFollowerRead])
+def list_followers(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    return service.get_project_followers(db=db, project_id=project_id)
