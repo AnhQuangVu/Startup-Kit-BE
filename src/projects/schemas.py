@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List, Optional, Any
+from pydantic import BaseModel, Field, HttpUrl
+from typing import List, Optional, Any, Dict
 from datetime import datetime
 from src.database.models import ProjectStage
 
@@ -8,7 +8,7 @@ class ProjectSectionRead(BaseModel):
     type: str
     title: str
     content: Optional[dict] = None
-    file_url: Optional[str] = None
+    file_url: Optional[HttpUrl] = None
     updated_at: datetime
 
     class Config:
@@ -18,13 +18,41 @@ class ProjectSectionUpdateWS(BaseModel):
     title: Optional[str] = None
     content: Optional[dict] = None
 
+class StageItem(BaseModel):
+    id: str
+    title: str
+    description_html: Optional[str] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    status: Optional[str] = None
+    deliverables: Optional[List[str]] = None
+    budget: Optional[float] = None
+    progress_percent: Optional[int] = None
+    dependencies: Optional[List[str]] = None
+
+class MediaRef(BaseModel):
+    url: Optional[HttpUrl] = None
+    public_id: Optional[str] = None
+
 class ProjectCreate(BaseModel):
-    name: str = Field(..., min_length=3, max_length=100)
-    tagline: Optional[str] = Field(None, max_length=255)
-    stage: ProjectStage = ProjectStage.Y_TUONG
-    description: Optional[str] = Field(None, max_length=1000)
-    logo_url: Optional[str] = None
-    website_url: Optional[str] = None
+    # Core project fields that will remain on the Project row
+    name: str = Field(..., min_length=3, max_length=255)
+    tagline: Optional[str] = Field(None, max_length=500)
+    stage: Optional[ProjectStage] = None
+    description: Optional[str] = None
+
+    # media
+    logo: Optional[MediaRef] = None
+    logo_url: Optional[HttpUrl] = None
+    team_image: Optional[MediaRef] = None
+    product_images: Optional[List[MediaRef]] = None
+
+    # basic website
+    website_url: Optional[HttpUrl] = None
+    profile_url: Optional[HttpUrl] = None
+    use_ai: Optional[bool] = False
+
+    # business/product fields
     industry: Optional[str] = None
     pain_point: Optional[str] = None
     solution: Optional[str] = None
@@ -37,28 +65,45 @@ class ProjectCreate(BaseModel):
     revenue_method: Optional[str] = None
     distribution_channel: Optional[str] = None
     partners: Optional[str] = None
-    cost_estimate: Optional[str] = None
+    cost_estimate: Optional[Any] = None
     capital_source: Optional[str] = None
-    revenue_goal: Optional[str] = None
+    revenue_goal: Optional[Any] = None
     member_count: Optional[int] = None
     member_skills: Optional[str] = None
     resources: Optional[str] = None
-    team_image_url: Optional[str] = None
-    product_image_url: Optional[str] = None
-    use_ai: Optional[bool] = None
-    is_deleted: Optional[bool] = False  # Trường xoá mềm
     deployment_location: Optional[str] = None
 
+    # stages and progress
+    stages: Optional[List[StageItem]] = None
+    current_stage: Optional[str] = None
+    current_stage_label: Optional[str] = None
+
+    # meta and flexible sections
+    meta: Optional[Any] = None
+    sections: Optional[Any] = None
+
+    class Config:
+        from_attributes = True
+
 class ProjectRead(BaseModel):
+    # Core project fields
     id: int
     founder_id: int
     name: str
     tagline: Optional[str]
-    stage: ProjectStage
+    stage: Optional[ProjectStage]
     description: Optional[str]
-    logo_url: Optional[str]
-    website_url: Optional[str]
-    # --- Các trường mới ---
+
+    # media and links
+    logo: Optional[MediaRef]
+    logo_url: Optional[HttpUrl]
+    team_image: Optional[MediaRef]
+    product_images: Optional[List[MediaRef]]
+
+    website_url: Optional[HttpUrl]
+    profile_url: Optional[HttpUrl]
+    use_ai: Optional[bool]
+
     industry: Optional[str]
     pain_point: Optional[str]
     solution: Optional[str]
@@ -71,51 +116,121 @@ class ProjectRead(BaseModel):
     revenue_method: Optional[str]
     distribution_channel: Optional[str]
     partners: Optional[str]
-    cost_estimate: Optional[str]
+    cost_estimate: Optional[Any]
     capital_source: Optional[str]
-    revenue_goal: Optional[str]
+    revenue_goal: Optional[Any]
     member_count: Optional[int]
     member_skills: Optional[str]
     resources: Optional[str]
-    team_image_url: Optional[str]
-    product_image_url: Optional[str]
-    use_ai: Optional[bool]
+    deployment_location: Optional[str]
+
+    stages: Optional[List[StageItem]]
+    current_stage: Optional[str]
+    current_stage_label: Optional[str]
+
+    meta: Optional[Any]
+
+    # sections: returned as key->value mapping to match the FE payload
+    sections: Optional[Dict[str, Any]] = None
+
     created_at: datetime
     updated_at: datetime
-    sections: List[ProjectSectionRead]
-    is_deleted: Optional[bool] = False  # Trường xoá mềm
-    deployment_location: Optional[str]
 
     class Config:
         from_attributes = True
 
-class ProjectUpdate(BaseModel):
+
+# --- NEW SCHEMAS: members, posts, media, likes, comments, followers ---
+class ProjectMemberRead(BaseModel):
+    id: int
+    project_id: int
+    user_id: Optional[int] = None
     name: Optional[str] = None
-    tagline: Optional[str] = None
-    stage: Optional[ProjectStage] = None
-    description: Optional[str] = None
-    logo_url: Optional[str] = None
-    website_url: Optional[str] = None
-    industry: Optional[str] = None
-    pain_point: Optional[str] = None
-    solution: Optional[str] = None
-    product: Optional[str] = None
-    customer_segment: Optional[str] = None
-    customer_features: Optional[str] = None
-    market_size: Optional[str] = None
-    market_area: Optional[str] = None
-    business_model: Optional[str] = None
-    revenue_method: Optional[str] = None
-    distribution_channel: Optional[str] = None
-    partners: Optional[str] = None
-    cost_estimate: Optional[str] = None
-    capital_source: Optional[str] = None
-    revenue_goal: Optional[str] = None
-    member_count: Optional[int] = None
-    member_skills: Optional[str] = None
-    resources: Optional[str] = None
-    team_image_url: Optional[str] = None
-    product_image_url: Optional[str] = None
-    use_ai: Optional[bool] = None
-    is_deleted: Optional[bool] = None
-    deployment_location: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
+    role_in_project: Optional[str] = None
+    is_founder: Optional[bool] = False
+    joined_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectMemberCreate(BaseModel):
+    user_id: Optional[int] = None
+    name: Optional[str] = None
+    avatar_url: Optional[HttpUrl] = None
+    role_in_project: Optional[str] = None
+    is_founder: Optional[bool] = False
+
+    class Config:
+        from_attributes = True
+
+class MediaItem(BaseModel):
+    url: HttpUrl
+    public_id: Optional[str] = None
+    media_type: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+class ProjectPostCreate(BaseModel):
+    title: Optional[str] = None
+    body: Optional[str] = None
+    media: Optional[List[MediaItem]] = None
+    visibility: Optional[str] = "public"
+
+    class Config:
+        from_attributes = True
+
+class ProjectPostRead(BaseModel):
+    id: int
+    project_id: int
+    author_id: Optional[int] = None
+    title: Optional[str] = None
+    body: Optional[str] = None
+    visibility: Optional[str] = None
+    media: Optional[List[MediaItem]] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PostLikeRead(BaseModel):
+    id: int
+    post_id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class PostCommentCreate(BaseModel):
+    body: str
+    parent_comment_id: Optional[int] = None
+
+    class Config:
+        from_attributes = True
+
+class PostCommentRead(BaseModel):
+    id: int
+    post_id: int
+    author_id: int
+    body: str
+    parent_comment_id: Optional[int] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectFollowerRead(BaseModel):
+    id: int
+    project_id: int
+    user_id: int
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class ProjectFollowCreate(BaseModel):
+    # empty body accepted; we only need current user in backend
+    pass

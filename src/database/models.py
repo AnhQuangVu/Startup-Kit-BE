@@ -100,13 +100,14 @@ class UserProfile(Base):
 # --- MODULE: QUẢN LÝ DỰ ÁN ---
 class Category(Base):
     __tablename__ = "categories"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), unique=True, nullable=False)
     type = Column(String(50), nullable=False, index=True)
-    
+
     def __repr__(self):
         return f"<Category(name='{self.name}', type='{self.type}')>"
+
 
 class Project(Base):
     __tablename__ = "projects"
@@ -119,45 +120,55 @@ class Project(Base):
     logo_url = Column(String(512))
     stage = Column(Enum(ProjectStage), index=True)
     website_url = Column(String(512))
-    industry = Column(String(255))
-    pain_point = Column(Text)
-    solution = Column(Text)
-    product = Column(Text)
-    customer_segment = Column(String(255))
-    customer_features = Column(Text)
-    market_size = Column(String(255))
-    market_area = Column(String(255))
-    business_model = Column(Text)
-    revenue_method = Column(String(255))
-    distribution_channel = Column(String(255))
-    partners = Column(Text)
-    cost_estimate = Column(String(255))
-    capital_source = Column(String(255))
-    revenue_goal = Column(String(255))
-    member_count = Column(Integer)
-    member_skills = Column(Text)
-    resources = Column(Text)
-    team_image_url = Column(String(512))
-    product_image_url = Column(String(512))
-    pdf_url = Column(String(512), nullable=True)
-    use_ai = Column(Boolean, default=False)
-    is_deleted = Column(Boolean, default=False)  # Trường xoá mềm
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
-    deployment_location = Column(String(255))
+
+    # Flexible columns to store richer payloads
+    logo = Column(JSON, nullable=True)  # {url, public_id}
+    team_image = Column(JSON, nullable=True)
+    product_images = Column(JSON, nullable=True)  # list
+
+    industry = Column(String(255), nullable=True)
+    pain_point = Column(Text, nullable=True)
+    solution = Column(Text, nullable=True)
+    product = Column(Text, nullable=True)
+    customer_segment = Column(Text, nullable=True)
+    customer_features = Column(Text, nullable=True)
+    market_size = Column(String(255), nullable=True)
+    market_area = Column(String(255), nullable=True)
+    business_model = Column(Text, nullable=True)
+    revenue_method = Column(Text, nullable=True)
+    distribution_channel = Column(Text, nullable=True)
+    partners = Column(Text, nullable=True)
+    cost_estimate = Column(String(255), nullable=True)
+    capital_source = Column(String(255), nullable=True)
+    revenue_goal = Column(String(255), nullable=True)
+    member_count = Column(Integer, nullable=True)
+    member_skills = Column(String(255), nullable=True)
+    resources = Column(Text, nullable=True)
+    deployment_location = Column(String(255), nullable=True)
+    profile_url = Column(String(512), nullable=True)
+    use_ai = Column(Boolean, default=False)
+
+    stages = Column(JSON, nullable=True)
+    current_stage = Column(String(100), nullable=True)
+    current_stage_label = Column(String(255), nullable=True)
+
+    meta = Column(JSON, nullable=True)
 
     founder = relationship("User", back_populates="projects")
     sections = relationship("ProjectSection", back_populates="project", cascade="all, delete-orphan")
     versions = relationship("ProjectVersion", back_populates="project", cascade="all, delete-orphan")
     categories = relationship("Category", secondary=project_categories_table, backref="projects")
     connections_requests = relationship("Connection", back_populates="project", cascade="all, delete-orphan")
-    
+
     def __repr__(self):
         return f"<Project(id={self.id}, name='{self.name}')>"
 
+
 class ProjectSection(Base):
     __tablename__ = "project_sections"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
     type = Column(String(50), nullable=False)
@@ -168,9 +179,10 @@ class ProjectSection(Base):
 
     project = relationship("Project", back_populates="sections")
 
+
 class ProjectVersion(Base):
     __tablename__ = "project_versions"
-    
+
     id = Column(Integer, primary_key=True, autoincrement=True)
     project_id = Column(Integer, ForeignKey('projects.id'), nullable=False)
     version_number = Column(Integer, nullable=False)
@@ -234,3 +246,145 @@ class Notification(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     
     recipient = relationship("User", back_populates="notifications")
+
+
+# --- MODULE: PROJECT MEMBERS / POSTS / MEDIA / FOLLOWERS ---
+class ProjectMember(Base):
+    __tablename__ = "project_members"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    name = Column(String(255), nullable=True)
+    avatar_url = Column(String(512), nullable=True)
+    role_in_project = Column(String(100), nullable=True)
+    is_founder = Column(Boolean, default=False)
+    joined_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="members")
+    user = relationship("User", backref="project_members")
+
+    def __repr__(self):
+        return f"<ProjectMember(id={self.id}, project_id={self.project_id})>"
+
+
+class ProjectPost(Base):
+    __tablename__ = "project_posts"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
+    title = Column(String(255), nullable=True)
+    body = Column(Text, nullable=True)
+    visibility = Column(String(50), default="public", index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    project = relationship("Project", backref="posts")
+    author = relationship("User", backref="posts")
+    media = relationship("PostMedia", back_populates="post", cascade="all, delete-orphan")
+    likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
+    comments = relationship("PostComment", back_populates="post", cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f"<ProjectPost(id={self.id}, project_id={self.project_id})>"
+
+
+class PostMedia(Base):
+    __tablename__ = "post_media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    url = Column(String(1024), nullable=False)
+    public_id = Column(String(255), nullable=True)
+    media_type = Column(String(50), nullable=True)
+    order = Column(Integer, nullable=True)
+
+    post = relationship("ProjectPost", back_populates="media")
+
+    def __repr__(self):
+        return f"<PostMedia(id={self.id}, post_id={self.post_id})>"
+
+
+class PostLike(Base):
+    __tablename__ = "post_likes"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("ProjectPost", back_populates="likes")
+    user = relationship("User", backref="post_likes")
+
+    def __repr__(self):
+        return f"<PostLike(id={self.id}, post_id={self.post_id}, user_id={self.user_id})>"
+
+
+class PostComment(Base):
+    __tablename__ = "post_comments"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    author_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    body = Column(Text, nullable=False)
+    parent_comment_id = Column(Integer, ForeignKey('post_comments.id'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    post = relationship("ProjectPost", back_populates="comments")
+    author = relationship("User", backref="post_comments")
+    parent = relationship("PostComment", remote_side=[id], backref="replies")
+
+    def __repr__(self):
+        return f"<PostComment(id={self.id}, post_id={self.post_id})>"
+
+
+class ProjectFollower(Base):
+    __tablename__ = "project_followers"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="followers")
+    user = relationship("User", backref="followed_projects")
+
+    def __repr__(self):
+        return f"<ProjectFollower(id={self.id}, project_id={self.project_id}, user_id={self.user_id})>"
+
+
+class Media(Base):
+    __tablename__ = "media"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    url = Column(String(1024), nullable=False)
+    public_id = Column(String(255), nullable=True)
+    type = Column(String(50), nullable=True)
+    uploaded_by = Column(Integer, ForeignKey('users.id'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="media_items")
+    uploader = relationship("User", backref="uploaded_media")
+
+    def __repr__(self):
+        return f"<Media(id={self.id}, url='{self.url}')>"
+
+
+class ActivityLog(Base):
+    __tablename__ = "activity_log"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    actor_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+    type = Column(String(100), nullable=False)
+    payload = Column(JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    project = relationship("Project", backref="activities")
+    actor = relationship("User", backref="activities")
+
+    def __repr__(self):
+        return f"<ActivityLog(id={self.id}, type='{self.type}')>"
+
