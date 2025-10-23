@@ -83,7 +83,7 @@ class ProjectCreate(BaseModel):
     sections: Optional[Any] = None
 
     class Config:
-        schema_extra = {"example": {}}
+        from_attributes = True
 
 class ProjectRead(BaseModel):
     # Core project fields
