@@ -1,11 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, HTTPException, status, WebSocket, WebSocketDisconnect, Query, Request
 from sqlalchemy.orm import Session
 from typing import List
 
 from src.database.core import get_db
-from src.database.models import User, Project
-from src.auth.service import get_current_user, oauth2_scheme
-from src.users.service import get_user_by_email
+from src.database.models import User
+from src.auth.service import get_current_user
 from . import schemas, service
 
 router = APIRouter(
@@ -23,17 +22,100 @@ async def get_current_user_from_token_ws(
 
 
 @router.post("/", response_model=schemas.ProjectRead, status_code=status.HTTP_201_CREATED)
-def create_new_project(
-        project: schemas.ProjectCreate,
+async def create_new_project(
+        request: Request,
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
+    """Accept flexible JSON from frontend. Keys that match `ProjectCreate` fields are used as project fields;
+    other top-level keys are collected into `sections` and passed to service.create_project.
+    Also accepts `profile_meta` as `meta`, top-level `tags`, and `logo`/`team_image`/`product_images` mapping.
+    """
     if current_user.role != 'founder':
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only founders can create projects."
         )
-    return service.create_project(db=db, founder=current_user, project_data=project)
+
+    payload = await request.json()
+
+    # Determine allowed project fields from the Pydantic model
+    if hasattr(schemas.ProjectCreate, 'model_fields'):
+        model_fields = set(schemas.ProjectCreate.model_fields.keys())
+    else:
+        model_fields = set(getattr(schemas.ProjectCreate, '__fields__', {}).keys())
+
+    project_data = {}
+    sections = {}
+    meta = None
+
+    for k, v in payload.items():
+        # accept alternative meta key names
+        if k == 'meta' or k in ('profile_meta', 'profileMeta'):
+            meta = v
+            continue
+        if k in model_fields:
+            project_data[k] = v
+        else:
+            sections[k] = v
+
+    # extract from basic if present
+    basic = sections.get('basic') if isinstance(sections.get('basic'), dict) else None
+    if basic:
+        if not project_data.get('name'):
+            project_data['name'] = basic.get('name') or basic.get('projectName')
+        if 'tagline' in model_fields and not project_data.get('tagline'):
+            project_data['tagline'] = basic.get('tagline') or basic.get('subtitle')
+        if 'description' in model_fields and not project_data.get('description'):
+            project_data['description'] = basic.get('summary') or basic.get('description')
+        logo = basic.get('logo')
+        if logo and isinstance(logo, dict) and 'logo_url' in model_fields and not project_data.get('logo_url'):
+            project_data['logo_url'] = logo.get('url')
+
+    # top-level logo/team_image/product_images mapping
+    top_logo = payload.get('logo')
+    if top_logo and isinstance(top_logo, dict) and 'logo_url' in model_fields and not project_data.get('logo_url'):
+        project_data['logo_url'] = top_logo.get('url')
+
+    team_img = payload.get('team_image') or payload.get('teamImage') or payload.get('team_image_url')
+    if isinstance(team_img, dict) and 'team_image_url' in model_fields and not project_data.get('team_image_url'):
+        project_data['team_image_url'] = team_img.get('url')
+
+    product_images = payload.get('product_images') or payload.get('productImages')
+    if isinstance(product_images, list) and product_images and 'product_image_url' in model_fields and not project_data.get('product_image_url'):
+        first = product_images[0]
+        if isinstance(first, dict) and first.get('url'):
+            project_data['product_image_url'] = first.get('url')
+
+    # top-level tags -> meta.tags
+    if 'tags' in payload and 'tags' not in project_data:
+        if meta is None:
+            meta = {}
+        meta['tags'] = payload.get('tags')
+
+    # ensure owner id set by backend
+    if meta is None:
+        meta = {}
+    if isinstance(meta, dict):
+        meta['owner_id'] = current_user.id
+
+    if sections:
+        project_data['sections'] = sections
+    if meta:
+        project_data['meta'] = meta
+
+    try:
+        project_obj = schemas.ProjectCreate(**project_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid project payload: {e}")
+
+    try:
+        return service.create_project(db=db, founder=current_user, project_data=project_obj)
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        # Return the exception message and traceback for debugging (Postman)
+        raise HTTPException(status_code=500, detail={"error": str(e), "trace": tb})
 
 
 @router.get("/", response_model=List[schemas.ProjectRead])

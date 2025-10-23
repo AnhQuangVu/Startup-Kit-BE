@@ -123,6 +123,39 @@ class Project(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
+    # Flexible columns to store richer payloads
+    logo = Column(JSON, nullable=True)  # {url, public_id}
+    team_image = Column(JSON, nullable=True)
+    product_images = Column(JSON, nullable=True)  # list
+
+    industry = Column(String(255), nullable=True)
+    pain_point = Column(Text, nullable=True)
+    solution = Column(Text, nullable=True)
+    product = Column(Text, nullable=True)
+    customer_segment = Column(Text, nullable=True)
+    customer_features = Column(Text, nullable=True)
+    market_size = Column(String(255), nullable=True)
+    market_area = Column(String(255), nullable=True)
+    business_model = Column(Text, nullable=True)
+    revenue_method = Column(Text, nullable=True)
+    distribution_channel = Column(Text, nullable=True)
+    partners = Column(Text, nullable=True)
+    cost_estimate = Column(String(255), nullable=True)
+    capital_source = Column(String(255), nullable=True)
+    revenue_goal = Column(String(255), nullable=True)
+    member_count = Column(Integer, nullable=True)
+    member_skills = Column(String(255), nullable=True)
+    resources = Column(Text, nullable=True)
+    deployment_location = Column(String(255), nullable=True)
+    profile_url = Column(String(512), nullable=True)
+    use_ai = Column(Boolean, default=False)
+
+    stages = Column(JSON, nullable=True)
+    current_stage = Column(String(100), nullable=True)
+    current_stage_label = Column(String(255), nullable=True)
+
+    meta = Column(JSON, nullable=True)
+
     founder = relationship("User", back_populates="projects")
     sections = relationship("ProjectSection", back_populates="project", cascade="all, delete-orphan")
     versions = relationship("ProjectVersion", back_populates="project", cascade="all, delete-orphan")
