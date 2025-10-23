@@ -66,6 +66,16 @@ class User(Base):
     def __repr__(self):
         return f"<User(id={self.id}, email='{self.email}', role='{self.role.value}')>"
 
+    @property
+    def avatar_url(self):
+        """Proxy property so serializers can read avatar_url from the related profile.
+        Returns None if no profile or avatar set.
+        """
+        if self.profile:
+            return self.profile.avatar_url
+        return None
+
+
 class UserProfile(Base):
     __tablename__ = "user_profiles"
 

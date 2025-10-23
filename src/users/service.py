@@ -23,10 +23,25 @@ def create_user(db: Session, user: schemas.UserCreate):
 def update_user(db: Session, current_user: User, user_update: schemas.UserUpdate) -> User:
     update_data = user_update.model_dump(exclude_unset=True)
 
+    # Special-case avatar_url: proxy to profile.avatar_url
+    if 'avatar_url' in update_data:
+        avatar_value = update_data.pop('avatar_url')
+        if not current_user.profile:
+            current_user.profile = UserProfile()
+        current_user.profile.avatar_url = avatar_value
+
     for key, value in update_data.items():
-        if hasattr(current_user, key):
-            setattr(current_user, key, value)
-        elif hasattr(current_user.profile, key):
+        # First try to set attribute on User (but skip read-only proxy properties)
+        if hasattr(current_user, key) and key != 'profile':
+            try:
+                setattr(current_user, key, value)
+                continue
+            except Exception:
+                # If attribute exists but cannot be set (e.g., read-only property), fall back
+                pass
+
+        # Then try to set on profile
+        if current_user.profile and hasattr(current_user.profile, key):
             setattr(current_user.profile, key, value)
 
     db.add(current_user)

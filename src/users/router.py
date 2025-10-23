@@ -20,15 +20,7 @@ def update_user_me(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    return service.update_user(db=db, current_user=current_user, user_update=user_update)
-
-@router.patch("/me", response_model=schemas.UserRead)
-def update_user_profile(
-    update_data: schemas.UserUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
-):
-    user = service.update_user(db=db, current_user=current_user, user_update=update_data)
+    user = service.update_user(db=db, current_user=current_user, user_update=user_update)
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng hoặc bạn không có quyền cập nhật.")
     return user
