@@ -388,3 +388,28 @@ class ActivityLog(Base):
     def __repr__(self):
         return f"<ActivityLog(id={self.id}, type='{self.type}')>"
 
+
+# --- MODULE: AI & RAG DOCUMENTS ---
+class Document(Base):
+    """Model cho tài liệu được upload để sử dụng trong RAG"""
+    __tablename__ = "documents"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    filename = Column(String(255), nullable=False)
+    file_path = Column(String(512), nullable=False)
+    file_type = Column(String(50), nullable=False)  # pdf, txt, docx, etc.
+    file_size = Column(Integer, nullable=False)  # size in bytes
+    uploaded_by = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    content_preview = Column(Text, nullable=True)  # Preview của nội dung
+    is_processed = Column(Boolean, default=False)  # Đã xử lý và thêm vào vector store chưa
+    doc_metadata = Column(JSON, nullable=True)  # Metadata bổ sung
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    uploader = relationship("User", backref="documents")
+    project = relationship("Project", backref="documents")
+
+    def __repr__(self):
+        return f"<Document(id={self.id}, filename='{self.filename}', uploaded_by={self.uploaded_by})>"
+
