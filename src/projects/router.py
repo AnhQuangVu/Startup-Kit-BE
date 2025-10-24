@@ -119,11 +119,18 @@ async def create_new_project(
 
 
 @router.get("/", response_model=List[schemas.ProjectRead])
-def read_user_projects(
+def read_projects(
+        all_projects: bool = Query(False),
+        skip: int = Query(0, ge=0),
+        limit: int = Query(10, le=100),
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    return service.get_projects_by_founder(db=db, founder_id=current_user.id)
+    if all_projects:
+        # Admin or public list all projects
+        return service.get_all_projects(db=db, skip=skip, limit=limit)
+    else:
+        return service.get_projects_by_founder(db=db, founder_id=current_user.id)
 
 
 @router.get("/{project_id}", response_model=schemas.ProjectRead)
@@ -136,6 +143,99 @@ def read_project_details(
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
     return project
+
+
+@router.patch("/{project_id}", response_model=schemas.ProjectRead)
+async def update_project(
+        project_id: int,
+        request: Request,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    payload = await request.json()
+
+    # Similar to create, parse the payload
+    if hasattr(schemas.ProjectCreate, 'model_fields'):
+        model_fields = set(schemas.ProjectCreate.model_fields.keys())
+    else:
+        model_fields = set(getattr(schemas.ProjectCreate, '__fields__', {}).keys())
+
+    project_data = {}
+    sections = {}
+    meta = None
+
+    for k, v in payload.items():
+        if k == 'meta' or k in ('profile_meta', 'profileMeta'):
+            meta = v
+            continue
+        if k in model_fields:
+            project_data[k] = v
+        else:
+            sections[k] = v
+
+    # Similar extractions as in create
+    basic = sections.get('basic') if isinstance(sections.get('basic'), dict) else None
+    if basic:
+        if not project_data.get('name'):
+            project_data['name'] = basic.get('name') or basic.get('projectName')
+        if 'tagline' in model_fields and not project_data.get('tagline'):
+            project_data['tagline'] = basic.get('tagline') or basic.get('subtitle')
+        if 'description' in model_fields and not project_data.get('description'):
+            project_data['description'] = basic.get('summary') or basic.get('description')
+        logo = basic.get('logo')
+        if logo and isinstance(logo, dict) and 'logo_url' in model_fields and not project_data.get('logo_url'):
+            project_data['logo_url'] = logo.get('url')
+
+    top_logo = payload.get('logo')
+    if top_logo and isinstance(top_logo, dict) and 'logo_url' in model_fields and not project_data.get('logo_url'):
+        project_data['logo_url'] = top_logo.get('url')
+
+    team_img = payload.get('team_image') or payload.get('teamImage') or payload.get('team_image_url')
+    if isinstance(team_img, dict) and 'team_image_url' in model_fields and not project_data.get('team_image_url'):
+        project_data['team_image_url'] = team_img.get('url')
+
+    product_images = payload.get('product_images') or payload.get('productImages')
+    if isinstance(product_images, list) and product_images and 'product_image_url' in model_fields and not project_data.get('product_image_url'):
+        first = product_images[0]
+        if isinstance(first, dict) and first.get('url'):
+            project_data['product_image_url'] = first.get('url')
+
+    if 'tags' in payload and 'tags' not in project_data:
+        if meta is None:
+            meta = {}
+        meta['tags'] = payload.get('tags')
+
+    if sections:
+        project_data['sections'] = sections
+    if meta:
+        project_data['meta'] = meta
+
+    try:
+        project_obj = schemas.ProjectCreate(**project_data)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid project payload: {e}")
+
+    try:
+        return service.update_project(db=db, project_id=project_id, update_data=project_obj, user=current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_project(
+        project_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        service.delete_project(db=db, project_id=project_id, user=current_user)
+        return
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.websocket("/ws/{section_id}")
@@ -232,6 +332,36 @@ def get_post(
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
     return post
+
+
+@router.patch("/posts/{post_id}", response_model=schemas.ProjectPostRead)
+def update_post(
+        post_id: int,
+        post_update: schemas.ProjectPostCreate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        return service.update_post(db=db, post_id=post_id, update_data=post_update, user=current_user)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.delete("/posts/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(
+        post_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    try:
+        service.delete_post(db=db, post_id=post_id, user=current_user)
+        return
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/posts/{post_id}/comments", response_model=schemas.PostCommentRead, status_code=status.HTTP_201_CREATED)

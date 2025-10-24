@@ -519,3 +519,104 @@ async def publish_project(db: Session, project_id: int, user_id: int):
 
     return project
 
+
+def update_project(db: Session, project_id: int, update_data: schemas.ProjectCreate, user: User):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+    if project.founder_id != user.id:
+        raise ValueError("Only project founder can update")
+
+    # Update simple fields
+    for field in PROJECT_SIMPLE_FIELDS:
+        if hasattr(update_data, field) and getattr(update_data, field) is not None:
+            setattr(project, field, getattr(update_data, field))
+
+    # Update media fields
+    if update_data.logo:
+        project.logo = update_data.logo.dict() if update_data.logo else None
+    if update_data.logo_url:
+        project.logo_url = str(update_data.logo_url) if update_data.logo_url else None
+    if update_data.team_image:
+        project.team_image = update_data.team_image.dict() if update_data.team_image else None
+    if update_data.product_images:
+        project.product_images = [img.dict() for img in update_data.product_images] if update_data.product_images else None
+
+    # Update stages
+    if update_data.stages:
+        project.stages = [stage.dict() for stage in update_data.stages]
+
+    # Update meta
+    if update_data.meta is not None:
+        project.meta = sanitize_for_json(update_data.meta)
+
+    # Update sections
+    if update_data.sections is not None:
+        # Assuming sections are stored as JSON
+        project.sections = sanitize_for_json(update_data.sections)
+
+    project.updated_at = datetime.utcnow()
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+    return _project_to_response(project)
+
+
+def delete_project(db: Session, project_id: int, user: User):
+    project = db.query(Project).filter(Project.id == project_id).first()
+    if not project:
+        raise ValueError("Project not found")
+    if project.founder_id != user.id:
+        raise ValueError("Only project founder can delete")
+
+    db.delete(project)
+    db.commit()
+    return True
+
+
+def update_post(db: Session, post_id: int, update_data: schemas.ProjectPostCreate, user: User):
+    from src.database.models import ProjectPost
+    post = db.query(ProjectPost).filter(ProjectPost.id == post_id).first()
+    if not post:
+        raise ValueError("Post not found")
+    if post.author_id != user.id:
+        raise ValueError("Only post author can update")
+
+    if update_data.title is not None:
+        post.title = update_data.title
+    if update_data.body is not None:
+        post.body = update_data.body
+    if update_data.media is not None:
+        # Assuming media is stored as JSON
+        post.media = [media.dict() for media in update_data.media]
+    if update_data.visibility is not None:
+        post.visibility = update_data.visibility
+
+    post.updated_at = datetime.utcnow()
+    db.add(post)
+    db.commit()
+    db.refresh(post)
+    return post
+
+
+def delete_post(db: Session, post_id: int, user: User):
+    from src.database.models import ProjectPost
+    post = db.query(ProjectPost).filter(ProjectPost.id == post_id).first()
+    if not post:
+        raise ValueError("Post not found")
+    if post.author_id != user.id:
+        raise ValueError("Only post author can delete")
+
+    db.delete(post)
+    db.commit()
+    return True
+
+
+def get_all_projects(db: Session, skip: int = 0, limit: int = 10):
+    projects = (
+        db.query(Project)
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    return [_project_to_response(p) for p in projects]
