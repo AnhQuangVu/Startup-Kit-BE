@@ -453,16 +453,18 @@ async def publish_project(
     db: Session = Depends(get_db)
 ):
     """Publish a project to the platform"""
-    project = await service.get_project_by_id(db, project_id)
+    # get_project_by_id expects (db, project_id, user)
+    project = service.get_project_by_id(db, project_id, current_user)
     if not project:
         raise HTTPException(404, "Project not found")
 
-    if project.founder_id != current_user.id:
+    # `service.get_project_by_id` returns a dict response; use dict access
+    if project.get('founder_id') != current_user.id:
         raise HTTPException(403, "Only project founder can publish")
 
-    # Validate required fields
+    # Validate required fields — check dict keys
     required = ["name", "description", "tagline"]
-    missing = [field for field in required if not getattr(project, field)]
+    missing = [field for field in required if not project.get(field)]
     if missing:
         raise HTTPException(400, f"Missing required fields: {', '.join(missing)}")
 
