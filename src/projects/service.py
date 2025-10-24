@@ -518,3 +518,4 @@ async def publish_project(db: Session, project_id: int, user_id: int):
     db.commit()
 
     return project
+

@@ -334,3 +334,13 @@ async def publish_project(
     )
 
     return project
+
+
+@router.get("/published", response_model=List[schemas.ProjectRead])
+def get_published_projects(
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, le=50),
+    db: Session = Depends(get_db)
+):
+    """Get list of published projects"""
+    return service.get_published_projects(db=db, skip=skip, limit=limit)
