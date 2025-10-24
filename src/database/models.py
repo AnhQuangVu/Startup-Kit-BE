@@ -57,7 +57,16 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
-    projects = relationship("Project", back_populates="founder")
+    projects = relationship(
+        "Project",
+        back_populates="founder",
+        foreign_keys="[Project.founder_id]"
+    )
+    published_projects = relationship(
+        "Project",
+        foreign_keys="[Project.published_by]",
+        backref="publisher"
+    )
     connections = relationship("Connection", back_populates="investor")
     messages = relationship("Message", back_populates="sender")
     notifications = relationship("Notification", back_populates="recipient", cascade="all, delete-orphan")
@@ -113,13 +122,13 @@ class Project(Base):
     __tablename__ = "projects"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    founder_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    founder_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     name = Column(String(255), nullable=False, index=True)
     tagline = Column(String(500))
     description = Column(Text)
     logo_url = Column(String(512))
     stage = Column(Enum(ProjectStage), index=True)
-    website_url = Column(String(512))
+    website_url = Column(String(512), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
@@ -154,9 +163,18 @@ class Project(Base):
     current_stage = Column(String(100), nullable=True)
     current_stage_label = Column(String(255), nullable=True)
 
+    # Publishing fields
+    status = Column(String(50), default="draft")  # draft, published, archived
+    published_at = Column(DateTime(timezone=True), nullable=True)
+    published_by = Column(Integer, ForeignKey("users.id", ondelete='SET NULL'), nullable=True)
+
     meta = Column(JSON, nullable=True)
 
-    founder = relationship("User", back_populates="projects")
+    founder = relationship(
+        "User",
+        back_populates="projects",
+        foreign_keys=[founder_id]
+    )
     sections = relationship("ProjectSection", back_populates="project", cascade="all, delete-orphan")
     versions = relationship("ProjectVersion", back_populates="project", cascade="all, delete-orphan")
     categories = relationship("Category", secondary=project_categories_table, backref="projects")
@@ -384,7 +402,3 @@ class ActivityLog(Base):
 
     project = relationship("Project", backref="activities")
     actor = relationship("User", backref="activities")
-
-    def __repr__(self):
-        return f"<ActivityLog(id={self.id}, type='{self.type}')>"
-
