@@ -403,6 +403,10 @@ class ActivityLog(Base):
     project = relationship("Project", backref="activities")
     actor = relationship("User", backref="activities")
 
+    def __repr__(self):
+        return f"<ActivityLog(id={self.id}, type='{self.type}')>"
+
+
 # --- MODULE: AI & RAG DOCUMENTS ---
 class Document(Base):
     """Model cho tài liệu được upload để sử dụng trong RAG"""
