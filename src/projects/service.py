@@ -494,3 +494,27 @@ def unfollow_project(db: Session, project_id: int, user: User):
 
 def get_project_followers(db: Session, project_id: int, limit: int = 100):
     return db.query(ProjectFollower).filter(ProjectFollower.project_id == project_id).order_by(ProjectFollower.created_at.desc()).limit(limit).all()
+
+
+async def publish_project(db: Session, project_id: int, user_id: int):
+    """Publish a project to the platform"""
+    project = db.query(Project).filter(Project.id == project_id).first()
+
+    project.status = "published"
+    project.published_at = datetime.utcnow()
+    project.published_by = user_id
+
+    db.add(project)
+    db.commit()
+    db.refresh(project)
+
+    # Log activity
+    activity = ActivityLog(
+        project_id=project_id,
+        actor_id=user_id,
+        type="project_published"
+    )
+    db.add(activity)
+    db.commit()
+
+    return project

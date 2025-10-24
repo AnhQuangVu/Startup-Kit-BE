@@ -304,3 +304,33 @@ def list_followers(
         db: Session = Depends(get_db)
 ):
     return service.get_project_followers(db=db, project_id=project_id)
+
+
+@router.post("/{project_id}/publish")
+async def publish_project(
+    project_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Publish a project to the platform"""
+    project = await service.get_project_by_id(db, project_id)
+    if not project:
+        raise HTTPException(404, "Project not found")
+
+    if project.founder_id != current_user.id:
+        raise HTTPException(403, "Only project founder can publish")
+
+    # Validate required fields
+    required = ["name", "description", "tagline"]
+    missing = [field for field in required if not getattr(project, field)]
+    if missing:
+        raise HTTPException(400, f"Missing required fields: {', '.join(missing)}")
+
+    # Update project status
+    project = await service.publish_project(
+        db,
+        project_id=project_id,
+        user_id=current_user.id
+    )
+
+    return project
