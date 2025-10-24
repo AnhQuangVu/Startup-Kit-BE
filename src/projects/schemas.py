@@ -140,6 +140,22 @@ class ProjectRead(BaseModel):
         from_attributes = True
 
 
+class ProjectPublishedRead(BaseModel):
+    id: int
+    name: str
+    tagline: Optional[str]
+    description: Optional[str]
+    logo_url: Optional[HttpUrl]
+    website_url: Optional[HttpUrl]
+    industry: Optional[str]
+    created_at: datetime
+    published_at: Optional[datetime]
+    founder_id: int
+
+    class Config:
+        from_attributes = True
+
+
 # --- NEW SCHEMAS: members, posts, media, likes, comments, followers ---
 class ProjectMemberRead(BaseModel):
     id: int

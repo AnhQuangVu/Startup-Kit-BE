@@ -143,6 +143,75 @@ def _project_to_response(p: Project) -> Dict[str, Any]:
     return resp
 
 
+def project_to_response(p: Project) -> Dict[str, Any]:
+    # Build base response dict copying columns
+    resp: Dict[str, Any] = {
+        'id': p.id,
+        'founder_id': p.founder_id,
+        'name': p.name,
+        'tagline': p.tagline,
+        'stage': _serialize_stage(p.stage),
+        'description': p.description,
+        'logo': p.logo,
+        'logo_url': p.logo_url,
+        'team_image': p.team_image,
+        'product_images': p.product_images,
+        'website_url': p.website_url,
+        'profile_url': p.profile_url,
+        'industry': p.industry,
+        'pain_point': p.pain_point,
+        'solution': p.solution,
+        'product': p.product,
+        'customer_segment': p.customer_segment,
+        'customer_features': p.customer_features,
+        'market_size': p.market_size,
+        'market_area': p.market_area,
+        'business_model': p.business_model,
+        'revenue_method': p.revenue_method,
+        'distribution_channel': p.distribution_channel,
+        'partners': p.partners,
+        'cost_estimate': p.cost_estimate,
+        'capital_source': p.capital_source,
+        'revenue_goal': p.revenue_goal,
+        'member_count': p.member_count,
+        'member_skills': p.member_skills,
+        'resources': p.resources,
+        'deployment_location': p.deployment_location,
+        'use_ai': p.use_ai,
+        'stages': p.stages,
+        'current_stage': p.current_stage,
+        'current_stage_label': p.current_stage_label,
+        'meta': p.meta,
+        'created_at': p.created_at,
+        'updated_at': p.updated_at,
+    }
+
+    # Build sections mapping: original key stored in content['_key'] when available
+    sections_map: Dict[str, Any] = {}
+    for s in getattr(p, 'sections', []) or []:
+        content = s.content
+        key = None
+        if isinstance(content, dict) and '_key' in content:
+            key = content.get('_key')
+            # if we wrapped value under 'value', return that
+            if 'value' in content and len(content) == 2:
+                val = content.get('value')
+            else:
+                # remove internal _key when exposing
+                cpy = dict(content)
+                cpy.pop('_key', None)
+                val = cpy
+        else:
+            # fallback key: use title lowercased with underscores
+            key = s.title.lower().replace(' ', '_')
+            val = content
+        # sanitize values for response
+        sections_map[key] = sanitize_for_json(val)
+
+    resp['sections'] = sections_map
+    return resp
+
+
 def create_project(db: Session, founder: User, project_data: schemas.ProjectCreate) -> Dict[str, Any]:
     # create base project with minimal required fields
     db_project = Project(
@@ -619,4 +688,33 @@ def get_all_projects(db: Session, skip: int = 0, limit: int = 10):
         .limit(limit)
         .all()
     )
+    return [_project_to_response(p) for p in projects]
+
+
+def get_published_projects(db: Session, skip: int = 0, limit: int = 10):
+    projects = (
+        db.query(Project)
+        .filter(Project.status == "published")
+        .order_by(Project.published_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    # Return full project responses
+    return [_project_to_response(p) for p in projects]
+
+
+def get_published_projects_by_user(db: Session, user_id: int, skip: int = 0, limit: int = 10):
+    projects = (
+        db.query(Project)
+        .filter(Project.status == "published")
+        .filter(Project.founder_id == user_id)
+        .order_by(Project.published_at.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+
+    # Return full project responses
     return [_project_to_response(p) for p in projects]

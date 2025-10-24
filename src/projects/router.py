@@ -139,10 +139,20 @@ def read_project_details(
         current_user: User = Depends(get_current_user),
         db: Session = Depends(get_db)
 ):
-    project = service.get_project_by_id(db=db, project_id=project_id, user=current_user)
-    if not project:
+    # Allow public access for published projects
+    from src.database.models import Project
+    project_db = db.query(Project).filter(Project.id == project_id).first()
+    if not project_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found")
-    return project
+
+    if project_db.status == "published":
+        # Public access for published projects
+        return service.project_to_response(project_db)
+    else:
+        # Require auth and founder access for drafts
+        if not current_user or project_db.founder_id != current_user.id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+        return service.project_to_response(project_db)
 
 
 @router.patch("/{project_id}", response_model=schemas.ProjectRead)
@@ -466,11 +476,46 @@ async def publish_project(
     return project
 
 
-@router.get("/published", response_model=List[schemas.ProjectRead])
-def get_published_projects(
+# @router.get("/published", response_model=List[schemas.ProjectRead])
+# def get_published_projects(
+#     skip: int = Query(default=0, ge=0),
+#     limit: int = Query(default=10, le=50),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get list of published projects"""
+#     return service.get_published_projects(db=db, skip=skip, limit=limit)
+
+
+# @router.get("/users/{user_id}/projects", response_model=List[schemas.ProjectRead])
+# def get_user_published_projects(
+#     user_id: int,
+#     skip: int = Query(default=0, ge=0),
+#     limit: int = Query(default=10, le=50),
+#     db: Session = Depends(get_db)
+# ):
+#     """Get list of published projects by a specific user"""
+#     return service.get_published_projects_by_user(db=db, user_id=user_id, skip=skip, limit=limit)
+
+
+# Public router for endpoints that don't require auth
+public_router = APIRouter(prefix="/public")
+
+@public_router.get("/projects/published", response_model=List[dict])
+def get_published_projects_public(
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=10, le=50),
     db: Session = Depends(get_db)
 ):
     """Get list of published projects"""
     return service.get_published_projects(db=db, skip=skip, limit=limit)
+
+
+@public_router.get("/projects/users/{user_id}/projects", response_model=List[dict])
+def get_user_published_projects_public(
+    user_id: int,
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, le=50),
+    db: Session = Depends(get_db)
+):
+    """Get list of published projects by a specific user"""
+    return service.get_published_projects_by_user(db=db, user_id=user_id, skip=skip, limit=limit)
