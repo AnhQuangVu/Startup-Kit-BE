@@ -478,38 +478,22 @@ async def publish_project(
     return project
 
 
-# @router.get("/published", response_model=List[schemas.ProjectRead])
-# def get_published_projects(
-#     skip: int = Query(default=0, ge=0),
-#     limit: int = Query(default=10, le=50),
-#     db: Session = Depends(get_db)
-# ):
-#     """Get list of published projects"""
-#     return service.get_published_projects(db=db, skip=skip, limit=limit)
-
-
-# @router.get("/users/{user_id}/projects", response_model=List[schemas.ProjectRead])
-# def get_user_published_projects(
-#     user_id: int,
-#     skip: int = Query(default=0, ge=0),
-#     limit: int = Query(default=10, le=50),
-#     db: Session = Depends(get_db)
-# ):
-#     """Get list of published projects by a specific user"""
-#     return service.get_published_projects_by_user(db=db, user_id=user_id, skip=skip, limit=limit)
-
-
 # Public router for endpoints that don't require auth
 public_router = APIRouter(prefix="/public")
 
-@public_router.get("/projects/published", response_model=List[dict])
+@public_router.get("/projects/published", response_model=dict)
 def get_published_projects_public(
-    skip: int = Query(default=0, ge=0),
-    limit: int = Query(default=10, le=50),
+    industry: List[str] = Query(None),
+    stage: List[str] = Query(None),
+    q: str = Query(None),
+    limit: int = Query(default=10, ge=1, le=100),
+    cursor: str = Query(None),
+    facets: bool = Query(False),
+    sort: str = Query('newest'),
     db: Session = Depends(get_db)
 ):
-    """Get list of published projects"""
-    return service.get_published_projects(db=db, skip=skip, limit=limit)
+    """Get list of published projects with optional filters, cursor pagination and facets"""
+    return service.search_published_projects(db=db, industry=industry, stage=stage, q=q, limit=limit, cursor=cursor, facets=facets, sort=sort)
 
 
 @public_router.get("/projects/users/{user_id}/projects", response_model=List[dict])
