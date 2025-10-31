@@ -90,51 +90,57 @@ class ProjectRead(BaseModel):
     id: int
     founder_id: int
     name: str
-    tagline: Optional[str]
-    stage: Optional[ProjectStage]
-    description: Optional[str]
+    tagline: Optional[str] = None
+    stage: Optional[ProjectStage] = None
+    description: Optional[str] = None
 
     # media and links
-    logo: Optional[MediaRef]
-    logo_url: Optional[HttpUrl]
-    team_image: Optional[MediaRef]
-    product_images: Optional[List[MediaRef]]
+    logo: Optional[MediaRef] = None
+    logo_url: Optional[HttpUrl] = None
+    team_image: Optional[MediaRef] = None
+    # Some tests/frontend expect simple url fields for images
+    team_image_url: Optional[HttpUrl] = None
+    product_images: Optional[List[MediaRef]] = None
+    product_image_url: Optional[HttpUrl] = None
 
-    website_url: Optional[HttpUrl]
-    profile_url: Optional[HttpUrl]
-    use_ai: Optional[bool]
+    website_url: Optional[HttpUrl] = None
+    profile_url: Optional[HttpUrl] = None
+    use_ai: Optional[bool] = None
 
-    industry: Optional[str]
-    pain_point: Optional[str]
-    solution: Optional[str]
-    product: Optional[str]
-    customer_segment: Optional[str]
-    customer_features: Optional[str]
-    market_size: Optional[str]
-    market_area: Optional[str]
-    business_model: Optional[str]
-    revenue_method: Optional[str]
-    distribution_channel: Optional[str]
-    partners: Optional[str]
-    cost_estimate: Optional[Any]
-    capital_source: Optional[str]
-    revenue_goal: Optional[Any]
-    member_count: Optional[int]
-    member_skills: Optional[str]
-    resources: Optional[str]
-    deployment_location: Optional[str]
+    industry: Optional[str] = None
+    pain_point: Optional[str] = None
+    solution: Optional[str] = None
+    product: Optional[str] = None
+    customer_segment: Optional[str] = None
+    customer_features: Optional[str] = None
+    market_size: Optional[str] = None
+    market_area: Optional[str] = None
+    business_model: Optional[str] = None
+    revenue_method: Optional[str] = None
+    distribution_channel: Optional[str] = None
+    partners: Optional[str] = None
+    cost_estimate: Optional[Any] = None
+    capital_source: Optional[str] = None
+    revenue_goal: Optional[Any] = None
+    member_count: Optional[int] = None
+    member_skills: Optional[str] = None
+    resources: Optional[str] = None
+    deployment_location: Optional[str] = None
 
-    stages: Optional[List[StageItem]]
-    current_stage: Optional[str]
-    current_stage_label: Optional[str]
+    stages: Optional[List[StageItem]] = None
+    current_stage: Optional[str] = None
+    current_stage_label: Optional[str] = None
 
-    meta: Optional[Any]
+    meta: Optional[Any] = None
 
-    # sections: returned as key->value mapping to match the FE payload
-    sections: Optional[Dict[str, Any]] = None
+    # sections: FE/tests sometimes pass a list of sections; accept flexible type
+    sections: Optional[Any] = None
 
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    # tests expect this flag
+    is_deleted: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -197,10 +203,21 @@ class ProjectPostCreate(BaseModel):
     class Config:
         from_attributes = True
 
+# --- NEW: Author schema so we can return author details with a post ---
+class AuthorRead(BaseModel):
+    id: int
+    full_name: str
+    avatar_url: Optional[HttpUrl] = None
+
+    class Config:
+        from_attributes = True
+
 class ProjectPostRead(BaseModel):
     id: int
     project_id: int
     author_id: Optional[int] = None
+    # include nested author object (optional) so frontend can show the name/avatar
+    author: Optional[AuthorRead] = None
     title: Optional[str] = None
     body: Optional[str] = None
     visibility: Optional[str] = None
@@ -231,9 +248,13 @@ class PostCommentRead(BaseModel):
     id: int
     post_id: int
     author_id: int
+    # include nested author info so FE can display name/avatar
+    author: Optional[AuthorRead] = None
     body: str
     parent_comment_id: Optional[int] = None
     created_at: datetime
+    # nested replies (list of comment dicts). Use flexible typing to avoid forward refs.
+    replies: Optional[List[Any]] = None
 
     class Config:
         from_attributes = True

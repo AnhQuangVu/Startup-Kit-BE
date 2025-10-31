@@ -3,7 +3,7 @@ from sqlalchemy import (
     Column, Integer, String, Enum, DateTime, JSON, Boolean, Text,
     ForeignKey, Table
 )
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, backref
 from sqlalchemy.sql import func
 from .core import Base
 
@@ -271,7 +271,7 @@ class ProjectMember(Base):
     __tablename__ = "project_members"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
     name = Column(String(255), nullable=True)
     avatar_url = Column(String(512), nullable=True)
@@ -279,7 +279,7 @@ class ProjectMember(Base):
     is_founder = Column(Boolean, default=False)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project = relationship("Project", backref="members")
+    project = relationship("Project", backref=backref("members", cascade="all, delete-orphan"))
     user = relationship("User", backref="project_members")
 
     def __repr__(self):
@@ -290,7 +290,7 @@ class ProjectPost(Base):
     __tablename__ = "project_posts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     author_id = Column(Integer, ForeignKey('users.id'), nullable=True, index=True)
     title = Column(String(255), nullable=True)
     body = Column(Text, nullable=True)
@@ -298,7 +298,7 @@ class ProjectPost(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
-    project = relationship("Project", backref="posts")
+    project = relationship("Project", backref=backref("posts", cascade="all, delete-orphan"))
     author = relationship("User", backref="posts")
     media = relationship("PostMedia", back_populates="post", cascade="all, delete-orphan")
     likes = relationship("PostLike", back_populates="post", cascade="all, delete-orphan")
@@ -312,7 +312,7 @@ class PostMedia(Base):
     __tablename__ = "post_media"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id', ondelete='CASCADE'), nullable=False, index=True)
     url = Column(String(1024), nullable=False)
     public_id = Column(String(255), nullable=True)
     media_type = Column(String(50), nullable=True)
@@ -343,7 +343,7 @@ class PostComment(Base):
     __tablename__ = "post_comments"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    post_id = Column(Integer, ForeignKey('project_posts.id'), nullable=False, index=True)
+    post_id = Column(Integer, ForeignKey('project_posts.id', ondelete='CASCADE'), nullable=False, index=True)
     author_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     body = Column(Text, nullable=False)
     parent_comment_id = Column(Integer, ForeignKey('post_comments.id'), nullable=True)
@@ -361,11 +361,11 @@ class ProjectFollower(Base):
     __tablename__ = "project_followers"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=False, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=False, index=True)
     user_id = Column(Integer, ForeignKey('users.id'), nullable=False, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project = relationship("Project", backref="followers")
+    project = relationship("Project", backref=backref("followers", cascade="all, delete-orphan"))
     user = relationship("User", backref="followed_projects")
 
     def __repr__(self):
@@ -376,14 +376,14 @@ class Media(Base):
     __tablename__ = "media"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=True, index=True)
     url = Column(String(1024), nullable=False)
     public_id = Column(String(255), nullable=True)
     type = Column(String(50), nullable=True)
     uploaded_by = Column(Integer, ForeignKey('users.id'), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project = relationship("Project", backref="media_items")
+    project = relationship("Project", backref=backref("media_items", cascade="all, delete-orphan"))
     uploader = relationship("User", backref="uploaded_media")
 
     def __repr__(self):
@@ -394,13 +394,13 @@ class ActivityLog(Base):
     __tablename__ = "activity_log"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    project_id = Column(Integer, ForeignKey('projects.id'), nullable=True, index=True)
+    project_id = Column(Integer, ForeignKey('projects.id', ondelete='CASCADE'), nullable=True, index=True)
     actor_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     type = Column(String(100), nullable=False)
     payload = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    project = relationship("Project", backref="activities")
+    project = relationship("Project", backref=backref("activities", cascade="all, delete-orphan"))
     actor = relationship("User", backref="activities")
 
     def __repr__(self):
