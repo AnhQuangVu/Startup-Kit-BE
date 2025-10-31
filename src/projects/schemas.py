@@ -98,10 +98,7 @@ class ProjectRead(BaseModel):
     logo: Optional[MediaRef] = None
     logo_url: Optional[HttpUrl] = None
     team_image: Optional[MediaRef] = None
-    # Some tests/frontend expect simple url fields for images
-    team_image_url: Optional[HttpUrl] = None
     product_images: Optional[List[MediaRef]] = None
-    product_image_url: Optional[HttpUrl] = None
 
     website_url: Optional[HttpUrl] = None
     profile_url: Optional[HttpUrl] = None
@@ -126,6 +123,15 @@ class ProjectRead(BaseModel):
     member_skills: Optional[str] = None
     resources: Optional[str] = None
     deployment_location: Optional[str] = None
+
+    stages: Optional[List[StageItem]] = None
+    current_stage: Optional[str] = None
+    current_stage_label: Optional[str] = None
+
+    meta: Optional[Any] = None
+
+    # sections: returned as key->value mapping to match the FE payload
+    sections: Optional[Dict[str, Any]] = None
 
     stages: Optional[List[StageItem]] = None
     current_stage: Optional[str] = None

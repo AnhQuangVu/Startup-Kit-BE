@@ -6,6 +6,7 @@ from src.database.core import get_db
 from src.database.models import User
 from src.auth.service import get_current_user
 from . import schemas, service
+from .router_public import router as public_router
 
 router = APIRouter(
     prefix="/projects",
