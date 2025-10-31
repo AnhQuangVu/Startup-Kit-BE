@@ -474,12 +474,22 @@ def create_project_post(db: Session, project_id: int, author: User, post_data: s
     except Exception:
         db.rollback()
 
-    return post
+    # Re-query the post with author relationship loaded so Pydantic can access author fields
+    from src.database.models import ProjectPost as _PP
+    post_with_author = (
+        db.query(_PP)
+        .options(selectinload(_PP.author), selectinload(_PP.media))
+        .filter(_PP.id == post.id)
+        .first()
+    )
+
+    return post_with_author
 
 
 def get_project_posts(db: Session, project_id: int, limit: int = 50):
     return (
         db.query(ProjectPost)
+        .options(selectinload(ProjectPost.author), selectinload(ProjectPost.media))
         .filter(ProjectPost.project_id == project_id)
         .order_by(ProjectPost.created_at.desc())
         .limit(limit)
@@ -488,14 +498,28 @@ def get_project_posts(db: Session, project_id: int, limit: int = 50):
 
 
 def get_post_by_id(db: Session, post_id: int):
-    return db.query(ProjectPost).filter(ProjectPost.id == post_id).first()
+    return (
+        db.query(ProjectPost)
+        .options(selectinload(ProjectPost.author), selectinload(ProjectPost.media))
+        .filter(ProjectPost.id == post_id)
+        .first()
+    )
 
 
 def add_comment_to_post(db: Session, post_id: int, author: User, comment_data: schemas.PostCommentCreate):
     post = get_post_by_id(db, post_id=post_id)
     if not post:
         raise ValueError("Post not found")
-    pc = PostComment(post_id=post_id, author_id=(author.id if author else None), body=comment_data.body, parent_comment_id=getattr(comment_data, 'parent_comment_id', None))
+    parent_id = getattr(comment_data, 'parent_comment_id', None)
+    # If parent_id provided, validate it exists and belongs to same post
+    if parent_id is not None:
+        parent = db.query(PostComment).filter(PostComment.id == parent_id).first()
+        if not parent:
+            raise ValueError("Parent comment not found")
+        if parent.post_id != post_id:
+            raise ValueError("Parent comment must belong to the same post")
+
+    pc = PostComment(post_id=post_id, author_id=(author.id if author else None), body=comment_data.body, parent_comment_id=parent_id)
     db.add(pc)
     db.commit()
     db.refresh(pc)
@@ -504,7 +528,76 @@ def add_comment_to_post(db: Session, post_id: int, author: User, comment_data: s
         db.commit()
     except Exception:
         db.rollback()
-    return pc
+
+    # Re-query the created comment with author info so we can return serialized payload
+    from src.database.models import PostComment as _PC
+    created = (
+        db.query(_PC)
+        .options(selectinload(_PC.author))
+        .filter(_PC.id == pc.id)
+        .first()
+    )
+
+    def _serialize_comment(c: _PC) -> Dict[str, Any]:
+        return {
+            'id': c.id,
+            'post_id': c.post_id,
+            'author_id': c.author_id,
+            'author': {
+                'id': c.author.id,
+                'full_name': c.author.full_name,
+                'avatar_url': c.author.avatar_url
+            } if getattr(c, 'author', None) else None,
+            'body': c.body,
+            'parent_comment_id': c.parent_comment_id,
+            'created_at': c.created_at,
+            'replies': []
+        }
+
+    return _serialize_comment(created)
+
+
+def get_comments_for_post(db: Session, post_id: int):
+    """Return comments for a post as a nested list (tree) of dicts with author info."""
+    from src.database.models import PostComment as _PC
+
+    comments = (
+        db.query(_PC)
+        .filter(_PC.post_id == post_id)
+        .order_by(_PC.created_at.asc())
+        .options(selectinload(_PC.author))
+        .all()
+    )
+
+    # Map id -> serialized dict
+    nodes: Dict[int, Dict[str, Any]] = {}
+    roots: List[Dict[str, Any]] = []
+
+    for c in comments:
+        nodes[c.id] = {
+            'id': c.id,
+            'post_id': c.post_id,
+            'author_id': c.author_id,
+            'author': {
+                'id': c.author.id,
+                'full_name': c.author.full_name,
+                'avatar_url': c.author.avatar_url
+            } if getattr(c, 'author', None) else None,
+            'body': c.body,
+            'parent_comment_id': c.parent_comment_id,
+            'created_at': c.created_at,
+            'replies': []
+        }
+
+    # Build tree
+    for c in comments:
+        node = nodes[c.id]
+        if c.parent_comment_id and c.parent_comment_id in nodes:
+            nodes[c.parent_comment_id]['replies'].append(node)
+        else:
+            roots.append(node)
+
+    return roots
 
 
 def like_post(db: Session, post_id: int, user: User):
