@@ -133,8 +133,20 @@ class ProjectRead(BaseModel):
     # sections: returned as key->value mapping to match the FE payload
     sections: Optional[Any] = None
 
-    created_at: datetime
-    updated_at: datetime
+    stages: Optional[List[StageItem]] = None
+    current_stage: Optional[str] = None
+    current_stage_label: Optional[str] = None
+
+    meta: Optional[Any] = None
+
+    # sections: FE/tests sometimes pass a list of sections; accept flexible type
+    sections: Optional[Any] = None
+
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    # tests expect this flag
+    is_deleted: Optional[bool] = False
 
     class Config:
         from_attributes = True
@@ -197,10 +209,21 @@ class ProjectPostCreate(BaseModel):
     class Config:
         from_attributes = True
 
+# --- NEW: Author schema so we can return author details with a post ---
+class AuthorRead(BaseModel):
+    id: int
+    full_name: str
+    avatar_url: Optional[HttpUrl] = None
+
+    class Config:
+        from_attributes = True
+
 class ProjectPostRead(BaseModel):
     id: int
     project_id: int
     author_id: Optional[int] = None
+    # include nested author object (optional) so frontend can show the name/avatar
+    author: Optional[AuthorRead] = None
     title: Optional[str] = None
     body: Optional[str] = None
     visibility: Optional[str] = None
@@ -231,9 +254,13 @@ class PostCommentRead(BaseModel):
     id: int
     post_id: int
     author_id: int
+    # include nested author info so FE can display name/avatar
+    author: Optional[AuthorRead] = None
     body: str
     parent_comment_id: Optional[int] = None
     created_at: datetime
+    # nested replies (list of comment dicts). Use flexible typing to avoid forward refs.
+    replies: Optional[List[Any]] = None
 
     class Config:
         from_attributes = True

@@ -390,6 +390,22 @@ def comment_post(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.get("/posts/{post_id}/comments", response_model=List[schemas.PostCommentRead])
+def list_post_comments(
+        post_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
+):
+    """Return comments for a post as a nested tree (top-level comments with replies).
+    Authentication required to access comments.
+    """
+    try:
+        comments = service.get_comments_for_post(db=db, post_id=post_id)
+        return comments
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/posts/{post_id}/like", response_model=schemas.PostLikeRead)
 def like_post(
         post_id: int,
