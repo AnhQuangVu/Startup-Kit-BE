@@ -5,6 +5,7 @@ from src.database.models import User, Project, ProjectSection
 from pydantic import BaseModel
 from datetime import datetime, date
 import decimal
+import logging
 
 
 # List of Project model attributes we will map from incoming payload
@@ -79,6 +80,8 @@ def _project_to_response(p: Project) -> Dict[str, Any]:
     resp: Dict[str, Any] = {
         'id': p.id,
         'founder_id': p.founder_id,
+        # include founder info (mapped from User and UserProfile)
+        'founder': None,
         'name': p.name,
         'tagline': p.tagline,
         'stage': _serialize_stage(p.stage),
@@ -116,6 +119,65 @@ def _project_to_response(p: Project) -> Dict[str, Any]:
         'created_at': p.created_at,
         'updated_at': p.updated_at,
     }
+
+    # Populate founder info if available
+    try:
+        if getattr(p, 'founder', None):
+            u = p.founder
+            prof = getattr(u, 'profile', None)
+            # normalize achievements: can be list or semicolon-separated string
+            ach = None
+            if prof and getattr(prof, 'achievements', None) is not None:
+                if isinstance(prof.achievements, list):
+                    ach = prof.achievements
+                elif isinstance(prof.achievements, str):
+                    ach = [a.strip() for a in prof.achievements.split(';') if a.strip()]
+            # fallback if user-level achievements present (rare)
+            if ach is None and getattr(u, 'achievements', None) is not None:
+                if isinstance(u.achievements, list):
+                    ach = u.achievements
+                elif isinstance(u.achievements, str):
+                    ach = [a.strip() for a in u.achievements.split(';') if a.strip()]
+
+            # startups: prefer profile.startups
+            su = None
+            if prof and getattr(prof, 'startups', None) is not None:
+                su = prof.startups
+            elif getattr(u, 'startups', None) is not None:
+                su = u.startups
+
+            # role: prefer profile.role if set, else user.role
+            role_val = None
+            if prof and hasattr(prof, 'role') and getattr(prof, 'role', None):
+                role_val = prof.role
+            else:
+                try:
+                    role_val = getattr(u.role, 'value', str(u.role))
+                except Exception:
+                    role_val = str(getattr(u, 'role', None))
+
+            resp['founder'] = {
+                'id': u.id,
+                'avatar': getattr(u, 'avatar_url', None) or (getattr(prof, 'avatar_url', None) if prof else None),
+                'cover': getattr(u, 'cover_url', None) or (getattr(prof, 'cover_url', None) if prof else None),
+                'name': getattr(u, 'full_name', None),
+                'role': role_val,
+                'bio': getattr(prof, 'bio', None) if prof else None,
+                'location': getattr(prof, 'location', None) if prof else None,
+                'website': getattr(prof, 'website_url', None) if prof else None,
+                'phone': getattr(prof, 'phone', None) if prof else None,
+                'address': getattr(prof, 'address', None) if prof else None,
+                'company': getattr(prof, 'company', None) if prof else None,
+                'facebook': getattr(prof, 'facebook', None) if prof else None,
+                'linkedin': getattr(prof, 'linkedin', None) if prof else None,
+                'achievements': ach,
+                'pitch_deck_url': getattr(u, 'pitch_deck_url', None) or (getattr(prof, 'pitch_deck_url', None) if prof else None),
+                'startups': su,
+                'goal': getattr(u, 'connect_goal', None) or (getattr(prof, 'connect_goal', None) if prof else None)
+            }
+    except Exception:
+        # don't fail entire response if founder shaping errors
+        pass
 
     # Build sections mapping: original key stored in content['_key'] when available
     sections_map: Dict[str, Any] = {}
@@ -148,6 +210,7 @@ def project_to_response(p: Project) -> Dict[str, Any]:
     resp: Dict[str, Any] = {
         'id': p.id,
         'founder_id': p.founder_id,
+        'founder': None,
         'name': p.name,
         'tagline': p.tagline,
         'stage': _serialize_stage(p.stage),
@@ -185,6 +248,59 @@ def project_to_response(p: Project) -> Dict[str, Any]:
         'created_at': p.created_at,
         'updated_at': p.updated_at,
     }
+
+    try:
+        if getattr(p, 'founder', None):
+            u = p.founder
+            prof = getattr(u, 'profile', None)
+            ach = None
+            if prof and getattr(prof, 'achievements', None) is not None:
+                if isinstance(prof.achievements, list):
+                    ach = prof.achievements
+                elif isinstance(prof.achievements, str):
+                    ach = [a.strip() for a in prof.achievements.split(';') if a.strip()]
+            if ach is None and getattr(u, 'achievements', None) is not None:
+                if isinstance(u.achievements, list):
+                    ach = u.achievements
+                elif isinstance(u.achievements, str):
+                    ach = [a.strip() for a in u.achievements.split(';') if a.strip()]
+
+            su = None
+            if prof and getattr(prof, 'startups', None) is not None:
+                su = prof.startups
+            elif getattr(u, 'startups', None) is not None:
+                su = u.startups
+
+            role_val = None
+            if prof and hasattr(prof, 'role') and getattr(prof, 'role', None):
+                role_val = prof.role
+            else:
+                try:
+                    role_val = getattr(u.role, 'value', str(u.role))
+                except Exception:
+                    role_val = str(getattr(u, 'role', None))
+
+            resp['founder'] = {
+                'id': u.id,
+                'avatar': getattr(u, 'avatar_url', None) or (getattr(prof, 'avatar_url', None) if prof else None),
+                'cover': getattr(u, 'cover_url', None) or (getattr(prof, 'cover_url', None) if prof else None),
+                'name': getattr(u, 'full_name', None),
+                'role': role_val,
+                'bio': getattr(prof, 'bio', None) if prof else None,
+                'location': getattr(prof, 'location', None) if prof else None,
+                'website': getattr(prof, 'website_url', None) if prof else None,
+                'phone': getattr(prof, 'phone', None) if prof else None,
+                'address': getattr(prof, 'address', None) if prof else None,
+                'company': getattr(prof, 'company', None) if prof else None,
+                'facebook': getattr(prof, 'facebook', None) if prof else None,
+                'linkedin': getattr(prof, 'linkedin', None) if prof else None,
+                'achievements': ach,
+                'pitch_deck_url': getattr(u, 'pitch_deck_url', None) or (getattr(prof, 'pitch_deck_url', None) if prof else None),
+                'startups': su,
+                'goal': getattr(u, 'connect_goal', None) or (getattr(prof, 'connect_goal', None) if prof else None)
+            }
+    except Exception:
+        pass
 
     # Build sections mapping: original key stored in content['_key'] when available
     sections_map: Dict[str, Any] = {}
@@ -714,8 +830,53 @@ def update_project(db: Session, project_id: int, update_data: schemas.ProjectCre
 
     # Update sections
     if update_data.sections is not None:
-        # Assuming sections are stored as JSON
-        project.sections = sanitize_for_json(update_data.sections)
+        # sections are stored as ProjectSection rows. Don't assign a dict directly to the
+        # relationship (that causes SQLAlchemy: dict is not list-like). Instead update
+        # existing ProjectSection rows or create new ones based on incoming mapping.
+        incoming = update_data.sections
+        # Build map of existing sections by embedded _key or normalized title
+        existing_sections = {}
+        for s in (project.sections or []):
+            try:
+                key_from_content = s.content.get('_key') if isinstance(s.content, dict) else None
+            except Exception:
+                key_from_content = None
+            norm_title = s.title.lower().replace(' ', '_') if s.title else None
+            if key_from_content:
+                existing_sections[str(key_from_content)] = s
+            if norm_title:
+                existing_sections[norm_title] = s
+
+        if isinstance(incoming, dict):
+            for key, value in incoming.items():
+                norm_key = str(key).lower().replace(' ', '_')
+
+                # Normalize/wrap content similar to create_project
+                if value is None:
+                    wrapped = {"_key": key, "value": None}
+                elif not isinstance(value, (dict, list)):
+                    wrapped = {"_key": key, "value": sanitize_for_json(value)}
+                else:
+                    inner = sanitize_for_json(value)
+                    if isinstance(inner, dict):
+                        wrapped = {"_key": key, **inner}
+                    else:
+                        wrapped = {"_key": key, "value": inner}
+
+                matched = existing_sections.get(key) or existing_sections.get(norm_key)
+                if matched:
+                    matched.content = wrapped
+                    db.add(matched)
+                else:
+                    sec = ProjectSection(
+                        project_id=project.id,
+                        type=str(key).upper(),
+                        title=str(key),
+                        content=wrapped
+                    )
+                    db.add(sec)
+        else:
+            logging.getLogger(__name__).debug("Ignoring sections update: unexpected type %s", type(incoming))
 
     project.updated_at = datetime.utcnow()
     db.add(project)

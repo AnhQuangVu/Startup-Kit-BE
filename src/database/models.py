@@ -56,6 +56,13 @@ class User(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
 
+    # Profile-level and user-level media/links
+    # avatar_url is proxied via User.profile.avatar_url property
+    # Additional user-level fields requested
+    cover_url = Column(String(512), nullable=True)
+    pitch_deck_url = Column(String(512), nullable=True)
+    connect_goal = Column(Text, nullable=True)
+
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     projects = relationship(
         "Project",
@@ -99,6 +106,10 @@ class UserProfile(Base):
     company = Column(String(255), nullable=True)
     facebook = Column(String(255), nullable=True)
     linkedin = Column(String(255), nullable=True)
+
+    # New flexible JSON fields to store achievements and startups arrays
+    achievements = Column(JSON, nullable=True)  # list of {content, link}
+    startups = Column(JSON, nullable=True)      # list of startup dicts
 
     user = relationship("User", back_populates="profile")
 

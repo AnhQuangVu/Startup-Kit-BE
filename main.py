@@ -4,6 +4,7 @@ from src.auth.router import router as auth_router
 from src.users.router import router as users_router
 from src.projects.router import router as projects_router, public_router
 from src.ai.router import router as ai_router
+from src.users.router_public import router as public_users_router
 from src.database.core import engine, Base
 
 import time
@@ -37,6 +38,7 @@ app.include_router(users_router)
 app.include_router(projects_router)
 app.include_router(ai_router)
 app.include_router(public_router)
+app.include_router(public_users_router)
 
 @app.get("/")
 def read_root():
