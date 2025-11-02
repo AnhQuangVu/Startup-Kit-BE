@@ -1,14 +1,15 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 from typing import List, Optional, Any, Dict
 from datetime import datetime
 from src.database.models import ProjectStage
+
 
 class ProjectSectionRead(BaseModel):
     id: int
     type: str
     title: str
     content: Optional[dict] = None
-    file_url: Optional[HttpUrl] = None
+    file_url: Optional[str] = None
     updated_at: datetime
 
     class Config:
@@ -31,8 +32,35 @@ class StageItem(BaseModel):
     dependencies: Optional[List[str]] = None
 
 class MediaRef(BaseModel):
-    url: Optional[HttpUrl] = None
+    url: Optional[str] = None
     public_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+# New: Founder schema so API can return nested founder information with a project
+class FounderRead(BaseModel):
+    id: int
+    avatar: Optional[str] = None
+    cover: Optional[str] = None
+    name: Optional[str] = None
+    role: Optional[str] = None
+    bio: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    company: Optional[str] = None
+    facebook: Optional[str] = None
+    linkedin: Optional[str] = None
+    # achievements can be a list of strings OR list of objects (dicts) depending on profile storage
+    achievements: Optional[List[Any]] = None
+    pitch_deck_url: Optional[str] = None
+    startups: Optional[Any] = None
+    goal: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 class ProjectCreate(BaseModel):
     # Core project fields that will remain on the Project row
@@ -43,13 +71,13 @@ class ProjectCreate(BaseModel):
 
     # media
     logo: Optional[MediaRef] = None
-    logo_url: Optional[HttpUrl] = None
+    logo_url: Optional[str] = None
     team_image: Optional[MediaRef] = None
     product_images: Optional[List[MediaRef]] = None
 
     # basic website
-    website_url: Optional[HttpUrl] = None
-    profile_url: Optional[HttpUrl] = None
+    website_url: Optional[str] = None
+    profile_url: Optional[str] = None
     use_ai: Optional[bool] = False
 
     # business/product fields
@@ -89,6 +117,8 @@ class ProjectRead(BaseModel):
     # Core project fields
     id: int
     founder_id: int
+    # include nested founder/author details for frontend convenience
+    founder: Optional[FounderRead] = None
     name: str
     tagline: Optional[str] = None
     stage: Optional[ProjectStage] = None
@@ -96,12 +126,12 @@ class ProjectRead(BaseModel):
 
     # media and links
     logo: Optional[MediaRef] = None
-    logo_url: Optional[HttpUrl] = None
+    logo_url: Optional[str] = None
     team_image: Optional[MediaRef] = None
     product_images: Optional[List[MediaRef]] = None
 
-    website_url: Optional[HttpUrl] = None
-    profile_url: Optional[HttpUrl] = None
+    website_url: Optional[str] = None
+    profile_url: Optional[str] = None
     use_ai: Optional[bool] = None
 
     industry: Optional[str] = None
@@ -124,6 +154,7 @@ class ProjectRead(BaseModel):
     resources: Optional[str] = None
     deployment_location: Optional[str] = None
 
+    # stages and progress
     stages: Optional[List[StageItem]] = None
     current_stage: Optional[str] = None
     current_stage_label: Optional[str] = None
@@ -131,15 +162,6 @@ class ProjectRead(BaseModel):
     meta: Optional[Any] = None
 
     # sections: returned as key->value mapping to match the FE payload
-    sections: Optional[Dict[str, Any]] = None
-
-    stages: Optional[List[StageItem]] = None
-    current_stage: Optional[str] = None
-    current_stage_label: Optional[str] = None
-
-    meta: Optional[Any] = None
-
-    # sections: FE/tests sometimes pass a list of sections; accept flexible type
     sections: Optional[Any] = None
 
     created_at: Optional[datetime] = None
@@ -157,8 +179,8 @@ class ProjectPublishedRead(BaseModel):
     name: str
     tagline: Optional[str]
     description: Optional[str]
-    logo_url: Optional[HttpUrl]
-    website_url: Optional[HttpUrl]
+    logo_url: Optional[str]
+    website_url: Optional[str]
     industry: Optional[str]
     created_at: datetime
     published_at: Optional[datetime]
@@ -174,7 +196,7 @@ class ProjectMemberRead(BaseModel):
     project_id: int
     user_id: Optional[int] = None
     name: Optional[str] = None
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
     role_in_project: Optional[str] = None
     is_founder: Optional[bool] = False
     joined_at: datetime
@@ -185,7 +207,7 @@ class ProjectMemberRead(BaseModel):
 class ProjectMemberCreate(BaseModel):
     user_id: Optional[int] = None
     name: Optional[str] = None
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
     role_in_project: Optional[str] = None
     is_founder: Optional[bool] = False
 
@@ -193,7 +215,7 @@ class ProjectMemberCreate(BaseModel):
         from_attributes = True
 
 class MediaItem(BaseModel):
-    url: HttpUrl
+    url: str
     public_id: Optional[str] = None
     media_type: Optional[str] = None
 
@@ -213,7 +235,7 @@ class ProjectPostCreate(BaseModel):
 class AuthorRead(BaseModel):
     id: int
     full_name: str
-    avatar_url: Optional[HttpUrl] = None
+    avatar_url: Optional[str] = None
 
     class Config:
         from_attributes = True
