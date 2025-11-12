@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.orm import Session
+from typing import Optional
 from src.database.models import User
 from src.database.core import get_db
 from src.auth.service import get_current_user
@@ -24,6 +25,47 @@ def update_user_me(
     if not user:
         raise HTTPException(status_code=404, detail="Không tìm thấy người dùng hoặc bạn không có quyền cập nhật.")
     return user
+
+
+@router.get("/mentors", response_model=schemas.MentorListResponse)
+def get_mentors(
+    page: int = 1,
+    limit: int = 12,
+    expertise_areas: Optional[str] = None,
+    industry: Optional[str] = None,
+    search: Optional[str] = None,
+    sort_by: str = "created_at",
+    order: str = "desc",
+    is_active: Optional[bool] = True,
+    db: Session = Depends(get_db)
+):
+    """Discovery endpoint to list mentors with filters, pagination and sorting.
+    
+    Parameters:
+    - page: Page number (default: 1)
+    - limit: Items per page (default: 12)
+    - expertise_areas: Comma-separated list (e.g., "AI,Blockchain,Fintech")
+    - industry: Filter by industry
+    - search: Search by name or company
+    - sort_by: Sort field (created_at, full_name)
+    - order: Sort order (asc, desc)
+    - is_active: Filter active mentors only
+    """
+    areas = None
+    if expertise_areas:
+        areas = [a.strip() for a in expertise_areas.split(',') if a.strip()]
+    items, total = service.list_mentors(
+        db=db, 
+        page=page, 
+        limit=limit, 
+        expertise_areas=areas, 
+        industry=industry, 
+        search=search, 
+        sort_by=sort_by, 
+        order=order, 
+        is_active=is_active
+    )
+    return {"items": items, "total": total, "page": page, "limit": limit}
 
 @router.put("/me/password", status_code=status.HTTP_200_OK)
 def update_user_password_me(

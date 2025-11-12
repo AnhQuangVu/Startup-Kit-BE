@@ -24,6 +24,30 @@ class UserProfileRead(UserProfileBase):
     class Config:
         from_attributes = True
 
+
+class MentorProfileBase(BaseModel):
+    title: Optional[str] = None
+    current_position: Optional[str] = None
+    expertise_areas: Optional[List[str]] = None
+    community_link: Optional[str] = None
+    mentoring_experience: Optional[str] = None
+    achievements: Optional[List[Dict[str, Optional[str]]]] = None
+
+
+class MentorProfileUpdate(MentorProfileBase):
+    pass
+
+
+class MentorProfileRead(MentorProfileBase):
+    id: int
+    user_id: int
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 class UserCreate(BaseModel):  # Đăng ký người dùng
     full_name: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
@@ -46,7 +70,8 @@ class UserRead(BaseModel):  # Đọc thông tin người dùng
     created_at: datetime
     # NOTE: move contact fields into profile to avoid duplication; keep only avatar_url here if you want
     avatar_url: Optional[str] = None
-    profile: UserProfileRead
+    profile: Optional[UserProfileRead] = None  # ✅ FIX: Optional để hỗ trợ Mentor không có profile
+    mentor_profile: Optional[MentorProfileRead] = None
 
     # New user-level fields
     cover_url: Optional[str] = None
@@ -71,9 +96,37 @@ class UserUpdate(BaseModel):  # Cập nhật thông tin người dùng
     cover_url: Optional[str] = None
     pitch_deck_url: Optional[str] = None
     connect_goal: Optional[str] = None
-    # new profile-level flexible fields
+    # new profile-level flexible fields (for Founder)
     achievements: Optional[List[Dict[str, Optional[str]]]] = None
     startups: Optional[List[Dict[str, Optional[Any]]]] = None
+    # mentor-specific profile (for Mentor)
+    mentor_profile: Optional[MentorProfileUpdate] = None
+
+
+# --- Schemas for Mentor Listing (Discovery) ---
+class MentorListItem(BaseModel):
+    id: int
+    full_name: str
+    avatar_url: Optional[str] = None
+    cover_url: Optional[str] = None
+    bio: Optional[str] = None
+    company: Optional[str] = None
+    # embed mentor profile summary
+    mentor_profile: Optional[MentorProfileRead] = None
+    achievements: Optional[List[Dict[str, Optional[str]]]] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MentorListResponse(BaseModel):
+    items: List[MentorListItem]
+    total: int
+    page: int
+    limit: int
+
+    class Config:
+        from_attributes = True
 
 class UserPasswordUpdate(BaseModel):  # Cập nhật mật khẩu
     current_password: str

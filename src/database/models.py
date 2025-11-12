@@ -64,6 +64,7 @@ class User(Base):
     connect_goal = Column(Text, nullable=True)
 
     profile = relationship("UserProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    mentor_profile = relationship("MentorProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
     projects = relationship(
         "Project",
         back_populates="founder",
@@ -115,6 +116,31 @@ class UserProfile(Base):
 
     def __repr__(self):
         return f"<UserProfile(user_id={self.user_id})>"
+
+
+class MentorProfile(Base):
+    __tablename__ = "mentor_profiles"
+
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True, nullable=False)
+
+    title = Column(String(255), nullable=True)  
+    current_position = Column(String(255), nullable=True)  
+    expertise_areas = Column(JSON, nullable=True)  
+    community_link = Column(String(500), nullable=True)
+    mentoring_experience = Column(Text, nullable=True)  
+    
+    # Flexible JSON field for achievements (similar to UserProfile)
+    achievements = Column(JSON, nullable=True)  # list of {content, link}
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User", back_populates="mentor_profile")
+    
+    def __repr__(self):
+        return f"<MentorProfile(user_id={self.user_id})>"
 
 
 # --- MODULE: QUẢN LÝ DỰ ÁN ---
