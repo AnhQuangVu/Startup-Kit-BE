@@ -241,3 +241,22 @@ class VectorStoreStatsResponse(BaseModel):
     dimension: int
     unique_documents: int
     unique_projects: int
+
+
+class AIGenerateDescriptionRequest(BaseModel):
+    """Request để AI sinh mô tả startup profile với validation bảo mật"""
+    name: Optional[str] = Field(None, max_length=200, description="Tên startup hoặc dự án")
+    industry: Optional[str] = Field(None, max_length=150, description="Ngành nghề / lĩnh vực")
+    target_audience: Optional[str] = Field(None, max_length=300, description="Khách hàng mục tiêu")
+    key_features: Optional[str] = Field(None, max_length=1500, description="Điểm nổi bật / giải pháp chính")
+    tone: Optional[str] = Field("chuyên nghiệp, thu hút nhà đầu tư", max_length=100, description="Văn phong / phong cách")
+    current_description: Optional[str] = Field(None, max_length=3000, description="Mô tả hiện tại nếu muốn cải thiện")
+    project_id: Optional[int] = Field(None, description="ID dự án nếu muốn lấy ngữ cảnh tự động")
+
+
+class AIGenerateDescriptionResponse(BaseModel):
+    """Response chứa mô tả startup do AI sinh ra"""
+    description: str = Field(..., description="Mô tả chi tiết startup profile")
+    short_pitch: Optional[str] = Field(None, description="Elevator pitch ngắn gọn 1-2 câu")
+    tagline: Optional[str] = Field(None, description="Slogan / Tagline bắt tai")
+    suggested_tags: Optional[List[str]] = Field(default_factory=list, description="Từ khóa / tags gợi ý")

@@ -191,3 +191,31 @@ Trả về JSON:
     "full_text": "Toàn bộ văn bản sau khi hoàn thiện"
 }}
 """
+
+
+GENERATE_STARTUP_DESCRIPTION_PROMPT = """
+Bạn là một chuyên gia cố vấn khởi nghiệp và copywriter hàng đầu cho các startup kêu gọi vốn và tiếp cận khách hàng.
+Nhiệm vụ của bạn là tạo một đoạn mô tả (startup description) cuốn hút, ấn tượng, chuẩn chuyên nghiệp cho hồ sơ startup.
+
+Thông tin startup được cung cấp:
+- Tên startup: {name}
+- Ngành nghề / Lĩnh vực: {industry}
+- Khách hàng mục tiêu: {target_audience}
+- Điểm nổi bật / Giải pháp chính: {key_features}
+- Văn phong / Tone mong muốn: {tone}
+- Mô tả thô / Ghi chú hiện tại (nếu có): {current_description}
+
+Yêu cầu:
+1. "description": Viết một đoạn mô tả hoàn chỉnh, hấp dẫn, mạch lạc từ 2 đến 4 đoạn văn ngắn (khoảng 150 - 300 từ) nêu bật vấn đề, giải pháp, giá trị độc đáo và tiềm năng phát triển của startup.
+2. "short_pitch": Một câu elevator pitch ngắn gọn (1-2 câu) tóm gọn startup là gì và đem lại giá trị gì.
+3. "tagline": Slogan ngắn gọn, bắt tai (3-8 từ).
+4. "suggested_tags": Danh sách 3-5 thẻ tag / từ khóa nổi bật (VD: ["AI", "EdTech", "SaaS"]).
+
+Trả về ĐÚNG định dạng JSON sau:
+{{
+    "description": "...",
+    "short_pitch": "...",
+    "tagline": "...",
+    "suggested_tags": ["tag1", "tag2", "tag3"]
+}}
+"""
