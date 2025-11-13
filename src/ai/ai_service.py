@@ -270,5 +270,40 @@ Trả về JSON:
             raise Exception(f"Failed to parse enhancement response: {str(e)}")
 
 
+    def generate_startup_description(
+        self,
+        name: Optional[str] = None,
+        industry: Optional[str] = None,
+        target_audience: Optional[str] = None,
+        key_features: Optional[str] = None,
+        tone: Optional[str] = None,
+        current_description: Optional[str] = None,
+    ) -> schemas.AIGenerateDescriptionResponse:
+        """
+        Sinh mô tả startup profile từ các thông tin cơ bản
+        """
+        prompt = prompts.GENERATE_STARTUP_DESCRIPTION_PROMPT.format(
+            name=name or "Chưa đặt tên",
+            industry=industry or "Đa ngành",
+            target_audience=target_audience or "Chưa xác định",
+            key_features=key_features or "Giải pháp ứng dụng công nghệ đột phá",
+            tone=tone or "chuyên nghiệp, thu hút nhà đầu tư",
+            current_description=current_description or "Chưa có",
+        )
+        
+        response_text = self._call_openai(prompt, temperature=0.75)
+        
+        try:
+            response_data = json.loads(response_text)
+            return schemas.AIGenerateDescriptionResponse(
+                description=response_data.get("description", ""),
+                short_pitch=response_data.get("short_pitch"),
+                tagline=response_data.get("tagline"),
+                suggested_tags=response_data.get("suggested_tags", []),
+            )
+        except json.JSONDecodeError as e:
+            raise Exception(f"Failed to parse AI description response: {str(e)}")
+
+
 # Singleton instance
 ai_service = AIService()

@@ -61,6 +61,62 @@ def generate_project_from_description(
             detail=f"Lỗi khi tạo dự án: {str(e)}"
         )
 
+
+@router.post("/generate-description", response_model=schemas.AIGenerateDescriptionResponse)
+def generate_startup_description(
+    request: schemas.AIGenerateDescriptionRequest,
+    current_user: Optional[User] = Depends(get_optional_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Sinh mô tả hồ sơ startup tự động bằng AI (LLM)
+    
+    Có thể truyền trực tiếp:
+    - name: Tên startup
+    - industry: Lĩnh vực
+    - target_audience: Khách hàng mục tiêu
+    - key_features: Giải pháp / điểm nổi bật
+    - tone: Phong cách văn phong
+    - current_description: Mô tả nháp / hiện tại để cải thiện
+    - project_id (tùy chọn): Tự động lấy thông tin từ database nếu có
+    """
+    try:
+        name = request.name
+        industry = request.industry
+        target_audience = request.target_audience
+        key_features = request.key_features
+        current_description = request.current_description
+
+        # Nếu có project_id và các trường chưa được điền đầy đủ, lấy thông tin từ project trong DB
+        if request.project_id:
+            project = db.query(Project).filter(Project.id == request.project_id).first()
+            if project:
+                if not name:
+                    name = project.name
+                if not industry:
+                    industry = project.industry
+                if not target_audience:
+                    target_audience = project.customer_segment
+                if not key_features:
+                    key_features = project.solution or project.product
+                if not current_description:
+                    current_description = project.description
+
+        result = ai_service.generate_startup_description(
+            name=name,
+            industry=industry,
+            target_audience=target_audience,
+            key_features=key_features,
+            tone=request.tone,
+            current_description=current_description
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi khi sinh mô tả startup bằng AI: {str(e)}"
+        )
+
 @router.post("/suggest", response_model=schemas.AISuggestionResponse)
 def get_field_suggestions(
     request: schemas.AISuggestionRequest,
