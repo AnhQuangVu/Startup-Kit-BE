@@ -28,6 +28,10 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         detail="Không thể xác thực thông tin đăng nhập.",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    # If oauth2_scheme is configured with auto_error=False, token may be None.
+    # Explicitly raise a 401 so secured endpoints behave the same as before.
+    if not token:
+        raise credentials_exception
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         email: str = payload.get("sub")
