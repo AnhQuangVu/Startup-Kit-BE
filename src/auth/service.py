@@ -7,8 +7,10 @@ from src.core.config import settings
 from src.database.core import get_db
 from src.users import service as user_service
 from . import schemas
+from typing import Optional
+from src.database.models import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token", auto_error=False)
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
     to_encode = data.copy()
@@ -38,3 +40,16 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+
+def get_optional_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)) -> Optional[User]:
+    """Dependency that returns current user if token valid, otherwise returns None.
+
+    Use this for endpoints that allow anonymous access but should attach user when available.
+    """
+    if not token:
+        return None
+    try:
+        return get_current_user(token=token, db=db)
+    except Exception:
+        return None

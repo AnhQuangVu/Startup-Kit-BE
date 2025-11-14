@@ -7,6 +7,8 @@ import shutil
 from src.database.core import get_db
 from src.database.models import User, Project, Document
 from src.auth.service import get_current_user
+from src.auth.service import get_optional_current_user
+from typing import Optional
 from src.core.config import settings
 from . import schemas
 from .ai_service import ai_service
@@ -482,6 +484,40 @@ def chat_with_rag(
         result = rag_service.chat_with_rag(
             user_message=request.message,
             project_id=request.project_id,
+            use_google=request.use_google,
+            conversation_history=request.conversation_history
+        )
+        return result
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Lỗi chat: {str(e)}"
+        )
+
+
+@router.post("/chat/public", response_model=schemas.RAGChatResponse)
+def chat_public(
+    request: schemas.RAGChatRequest,
+    current_user: Optional[User] = Depends(get_optional_current_user)
+):
+    """Public chat endpoint: allows anonymous users.
+
+    Restrictions for anonymous requests:
+    - `project_id` is not allowed (project context requires authentication)
+    - message length limited
+    """
+    # Reject project context for anonymous users
+    if current_user is None and request.project_id is not None:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Project context requires authentication")
+
+    # Simple input guard for anonymous users
+    if current_user is None and request.message and len(request.message) > 1000:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Message too long for anonymous requests")
+
+    try:
+        result = rag_service.chat_with_rag(
+            user_message=request.message,
+            project_id=(request.project_id if current_user else None),
             use_google=request.use_google,
             conversation_history=request.conversation_history
         )
