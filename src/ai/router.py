@@ -87,9 +87,16 @@ def generate_startup_description(
         key_features = request.key_features
         current_description = request.current_description
 
-        # Nếu có project_id và các trường chưa được điền đầy đủ, lấy thông tin từ project trong DB
+        # Nếu có project_id, kiểm tra quyền truy cập chống IDOR và trích xuất ngữ cảnh dự án
         if request.project_id:
-            project = db.query(Project).filter(Project.id == request.project_id).first()
+            query = db.query(Project).filter(Project.id == request.project_id)
+            if current_user:
+                # Cho phép lấy nếu là chủ sở hữu hoặc dự án đã publish
+                project = query.filter((Project.founder_id == current_user.id) | (getattr(Project, "is_published", False) == True)).first()
+            else:
+                # Nếu khách vãng lai, chỉ cho phép nếu dự án đã publish công khai
+                project = query.filter(getattr(Project, "is_published", False) == True).first()
+
             if project:
                 if not name:
                     name = project.name

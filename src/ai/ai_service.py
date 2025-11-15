@@ -12,28 +12,29 @@ class AIService:
     """Service xử lý các tác vụ AI"""
     
     def __init__(self):
-        """Khởi tạo OpenAI client"""
-        if not settings.API_KEY:
-            raise ValueError("API_KEY not configured in settings")
-        
-        self.client = OpenAI(
-            api_key=settings.API_KEY,
-            base_url=settings.BASE_URL
-        )
-        self.model = settings.LLM_MODEL
+        """Khởi tạo OpenAI client an toàn, không crash app nếu API_KEY chưa được cấu hình lúc startup"""
+        self.client = None
+        if settings.API_KEY and settings.API_KEY != "your_openai_api_key_here":
+            try:
+                self.client = OpenAI(
+                    api_key=settings.API_KEY,
+                    base_url=settings.BASE_URL
+                )
+            except Exception as e:
+                print(f"[Warning] Khởi tạo OpenAI client thất bại: {e}")
+        self.model = settings.LLM_MODEL or "gpt-4o-mini"
     
     def _call_openai(self, prompt: str, temperature: float = 0.7) -> str:
         """
-        Gọi OpenAI API với prompt
-        
-        Args:
-            prompt: Prompt text
-            temperature: Độ sáng tạo (0-1)
-            
-        Returns:
-            Response text từ model
+        Gọi OpenAI API với prompt an toàn
         """
         try:
+            if not self.client:
+                if settings.API_KEY and settings.API_KEY != "your_openai_api_key_here":
+                    self.client = OpenAI(api_key=settings.API_KEY, base_url=settings.BASE_URL)
+                else:
+                    raise ValueError("Chưa cấu hình API_KEY hợp lệ trong file .env cho dịch vụ AI")
+            
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
@@ -41,11 +42,17 @@ class AIService:
                     {"role": "user", "content": prompt}
                 ],
                 temperature=temperature,
-                response_format={"type": "json_object"}
+                response_format={"type": "json_object"},
+                timeout=30.0
             )
             return response.choices[0].message.content
         except Exception as e:
-            raise Exception(f"Error calling OpenAI API: {str(e)}")
+            err_msg = str(e)
+            if "quota" in err_msg.lower() or "429" in err_msg:
+                raise Exception("Tài khoản OpenAI đã hết hạn mức (quota) hoặc bị giới hạn tần suất. Vui lòng kiểm tra lại gói API.")
+            elif "authentication" in err_msg.lower() or "401" in err_msg:
+                raise Exception("Khóa API_KEY không hợp lệ hoặc đã hết hạn.")
+            raise Exception(f"Lỗi khi gọi AI API: {err_msg}")
     
     def generate_project_from_description(self, description: str) -> schemas.AIGeneratedProject:
         """
