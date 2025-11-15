@@ -85,7 +85,7 @@ class DocumentProcessor:
             # Chunk documents
             chunks = self.text_splitter.split_documents(documents)
             
-            print(f"✓ Processed document into {len(chunks)} chunks")
+            print(f"[OK] Processed document into {len(chunks)} chunks")
             return chunks
         
         except Exception as e:
@@ -117,7 +117,7 @@ class DocumentProcessor:
             # Chunk
             chunks = self.text_splitter.split_documents([doc])
             
-            print(f"✓ Processed text into {len(chunks)} chunks")
+            print(f"[OK] Processed text into {len(chunks)} chunks")
             return chunks
         
         except Exception as e:

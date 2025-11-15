@@ -48,7 +48,7 @@ class VectorStore:
                 with open(self.metadata_file, 'rb') as f:
                     self.metadata = pickle.load(f)
                 
-                print(f"✓ Loaded vector store with {self.index.ntotal} vectors")
+                print(f"[OK] Loaded vector store with {self.index.ntotal} vectors")
             except Exception as e:
                 print(f"⚠ Error loading index: {e}. Creating new index...")
                 self._create_new_index()
@@ -60,7 +60,7 @@ class VectorStore:
         # Sử dụng IndexFlatL2 cho độ chính xác cao
         self.index = faiss.IndexFlatL2(self.dimension)
         self.metadata = []
-        print("✓ Created new FAISS index")
+        print("[OK] Created new FAISS index")
     
     def _save_index(self):
         """Lưu index và metadata xuống disk"""
@@ -72,7 +72,7 @@ class VectorStore:
             with open(self.metadata_file, 'wb') as f:
                 pickle.dump(self.metadata, f)
             
-            print(f"✓ Saved vector store with {self.index.ntotal} vectors")
+            print(f"[OK] Saved vector store with {self.index.ntotal} vectors")
         except Exception as e:
             print(f"✗ Error saving index: {e}")
             raise
@@ -217,7 +217,7 @@ class VectorStore:
             # Lưu lại
             self._save_index()
             
-            print(f"✓ Deleted document {document_id}")
+            print(f"[OK] Deleted document {document_id}")
         
         except Exception as e:
             print(f"✗ Error deleting document: {e}")
@@ -249,7 +249,7 @@ class VectorStore:
             
             self._save_index()
             
-            print(f"✓ Deleted all documents from project {project_id}")
+            print(f"[OK] Deleted all documents from project {project_id}")
         
         except Exception as e:
             print(f"✗ Error deleting project documents: {e}")

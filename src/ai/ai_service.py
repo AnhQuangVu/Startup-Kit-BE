@@ -294,12 +294,31 @@ Trả về JSON:
         response_text = self._call_openai(prompt, temperature=0.75)
         
         try:
-            response_data = json.loads(response_text)
+            clean_text = (response_text or "").strip()
+            if clean_text.startswith("```json"):
+                clean_text = clean_text[7:]
+            elif clean_text.startswith("```"):
+                clean_text = clean_text[3:]
+            if clean_text.endswith("```"):
+                clean_text = clean_text[:-3]
+            clean_text = clean_text.strip()
+
+            response_data = json.loads(clean_text)
+            
+            # Đảm bảo tags luôn là list
+            raw_tags = response_data.get("suggested_tags", [])
+            if isinstance(raw_tags, str):
+                suggested_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+            elif isinstance(raw_tags, list):
+                suggested_tags = [str(t) for t in raw_tags]
+            else:
+                suggested_tags = []
+
             return schemas.AIGenerateDescriptionResponse(
                 description=response_data.get("description", ""),
                 short_pitch=response_data.get("short_pitch"),
                 tagline=response_data.get("tagline"),
-                suggested_tags=response_data.get("suggested_tags", []),
+                suggested_tags=suggested_tags,
             )
         except json.JSONDecodeError as e:
             raise Exception(f"Failed to parse AI description response: {str(e)}")
