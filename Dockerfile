@@ -22,12 +22,8 @@ COPY . .
 RUN mkdir -p /app/data/documents /app/data/vector_db && \
     chmod -R 755 /app/data
 
-# Expose port
+# Expose default port
 EXPOSE 8003
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8003/ || exit 1
-
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8003", "--proxy-headers"]
+# Run the application with dynamic PORT support for Render and Docker
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8003} --proxy-headers"]
