@@ -288,7 +288,35 @@ Trả về JSON:
     ) -> schemas.AIGenerateDescriptionResponse:
         """
         Sinh mô tả startup profile từ các thông tin cơ bản
+        Tự động fallback sinh mô tả thông minh nếu chưa có API Key
         """
+        # Nếu chưa cấu hình API_KEY, kích hoạt Smart Fallback Generator để hệ thống vẫn hoạt động mượt mà
+        has_key = bool(settings.API_KEY and settings.API_KEY != "your_openai_api_key_here")
+        if not has_key:
+            clean_name = name or "Dự án Khởi nghiệp"
+            clean_ind = industry or "Công nghệ & Đổi mới sáng tạo"
+            clean_aud = target_audience or "người dùng và doanh nghiệp tại Việt Nam"
+            clean_feat = key_features or "ứng dụng giải pháp số hóa để tối ưu hóa hiệu quả và trải nghiệm"
+
+            fallback_desc = (
+                f"{clean_name} là giải pháp tiên phong trong lĩnh vực {clean_ind}, "
+                f"được xây dựng nhằm giải quyết các thách thức then chốt của {clean_aud}.\n\n"
+                f"Với trọng tâm lấy người dùng làm trung tâm, dự án mang đến {clean_feat}. "
+                f"Sản phẩm tạo nên giá trị vượt trội thông qua việc tiết kiệm thời gian, tối ưu hóa chi phí vận hành "
+                f"và kiến tạo quy trình làm việc thông minh, hiện đại.\n\n"
+                f"Tầm nhìn của {clean_name} là tiếp tục đổi mới sáng tạo, mở rộng quy mô thị trường "
+                f"và trở thành nền tảng đáng tin cậy hàng đầu trong hệ sinh thái khởi nghiệp số."
+            )
+            fallback_pitch = f"{clean_name} - Giải pháp đột phá trong ngành {clean_ind} dành cho {clean_aud}."
+            fallback_tagline = f"Đột phá tương lai cùng {clean_name}"
+            fallback_tags = [clean_ind, "Khởi nghiệp", "Công nghệ", "Innovation"]
+
+            return schemas.AIGenerateDescriptionResponse(
+                description=fallback_desc,
+                short_pitch=fallback_pitch,
+                tagline=fallback_tagline,
+                suggested_tags=fallback_tags
+            )
         prompt = prompts.GENERATE_STARTUP_DESCRIPTION_PROMPT.format(
             name=name or "Chưa đặt tên",
             industry=industry or "Đa ngành",
