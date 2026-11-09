@@ -1,0 +1,79 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            redirect-uri: "${BACKEND_URL:http://localhost:8080}/login/oauth2/code/google"
+            scope:
+              - email
+              - profile
+          linkedin:
+            client-id: ${LINKEDIN_CLIENT_ID:linkedin-client-id}
+            client-secret: ${LINKEDIN_CLIENT_SECRET:linkedin-client-secret}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "${BACKEND_URL:http://localhost:8080}/login/oauth2/code/linkedin"
+            scope:
+              - openid
+              - profile
+              - email
+            client-name: LinkedIn
+        provider:
+          linkedin:
+            authorization-uri: https://www.linkedin.com/oauth/v2/authorization
+            token-uri: https://www.linkedin.com/oauth/v2/accessToken
+            user-info-uri: https://api.linkedin.com/v2/userinfo
+            user-name-attribute: sub
+
+  application:
+    name: platform
+
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:startupkit_db}}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    flyway:
+      enabled: true
+      locations: classpath:database/migration
+      baseline-on-migrate: true
+
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+server:
+  port: ${PORT:8080}
+
+jwt:
+  signerKey: ${JWT_SIGNER_KEY}
+  valid-duration: 3600
+  refreshable-duration: 86400
+
+app:
+  oauth2-redirect-uri: ${FRONTEND_URL:https://startup-kit-fe-s7jb.vercel.app}/vi/oauth2/callback

@@ -1,0 +1,55 @@
+databases:
+  - name: startupkit-db
+    databaseName: startupkit_db
+    user: startupkit_user
+    plan: free
+    region: singapore
+
+services:
+  - type: web
+    name: startupkit-be
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /v1/health
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8080
+      - key: DB_HOST
+        fromDatabase:
+          name: startupkit-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: startupkit-db
+          property: port
+      - key: DB_NAME
+        fromDatabase:
+          name: startupkit-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: startupkit-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: startupkit-db
+          property: password
+      - key: FRONTEND_URL
+        value: https://startup-kit-fe-s7jb.vercel.app
+      - key: JWT_SIGNER_KEY
+        generateValue: true
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: LINKEDIN_CLIENT_ID
+        sync: false
+      - key: LINKEDIN_CLIENT_SECRET
+        sync: false
+      - key: MAIL_USERNAME
+        sync: false
+      - key: MAIL_PASSWORD
+        sync: false
