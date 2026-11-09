@@ -25,6 +25,12 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: Optional[int] = 200
     TOP_K_RESULTS: Optional[int] = 10
 
+    # Social Auth Configurations
+    GOOGLE_CLIENT_ID: Optional[str] = ""
+    GOOGLE_CLIENT_SECRET: Optional[str] = ""
+    LINKEDIN_CLIENT_ID: Optional[str] = ""
+    LINKEDIN_CLIENT_SECRET: Optional[str] = ""
+
     class Config:
         env_file = ".env"
         extra = "ignore"

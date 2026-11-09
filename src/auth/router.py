@@ -54,4 +54,44 @@ def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db:
     access_token = auth_service.create_access_token(
         data={"sub": user.email}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "user": user}
+
+@router.get("/social/config")
+def get_social_config():
+    """Return public social auth configuration (client IDs) for frontend."""
+    return {
+        "google_client_id": settings.GOOGLE_CLIENT_ID or "",
+        "linkedin_client_id": settings.LINKEDIN_CLIENT_ID or "",
+    }
+
+@router.post("/social/login", response_model=schemas.Token)
+def social_login(payload: schemas.SocialAuthRequest, db: Session = Depends(get_db)):
+    """Authenticate or register a user via social provider (Google / LinkedIn)."""
+    user, access_token = auth_service.authenticate_or_register_social_user(db=db, request=payload)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user
+    }
+
+@router.post("/social/google", response_model=schemas.Token)
+def google_login(payload: schemas.SocialAuthRequest, db: Session = Depends(get_db)):
+    """Dedicated Google login / register endpoint."""
+    payload.provider = "google"
+    user, access_token = auth_service.authenticate_or_register_social_user(db=db, request=payload)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user
+    }
+
+@router.post("/social/linkedin", response_model=schemas.Token)
+def linkedin_login(payload: schemas.SocialAuthRequest, db: Session = Depends(get_db)):
+    """Dedicated LinkedIn login / register endpoint."""
+    payload.provider = "linkedin"
+    user, access_token = auth_service.authenticate_or_register_social_user(db=db, request=payload)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": user
+    }
