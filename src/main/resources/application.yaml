@@ -4,8 +4,8 @@ spring:
       client:
         registration:
           google:
-            client-id: ${GOOGLE_CLIENT_ID}
-            client-secret: ${GOOGLE_CLIENT_SECRET}
+            client-id: ${GOOGLE_CLIENT_ID:mock-google-client-id}
+            client-secret: ${GOOGLE_CLIENT_SECRET:mock-google-client-secret}
             redirect-uri: "${BACKEND_URL:http://localhost:8080}/login/oauth2/code/google"
             scope:
               - email
@@ -35,19 +35,22 @@ spring:
     time-zone: Asia/Ho_Chi_Minh
 
   datasource:
-    driver-class-name: org.postgresql.Driver
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
     url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:startupkit_db}}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    username: ${DB_USERNAME:startupkit_user}
+    password: ${DB_PASSWORD:startupkit_pass}
+    hikari:
+      initialization-fail-timeout: ${HIKARI_INIT_TIMEOUT:10000}
+      connection-timeout: 20000
+      maximum-pool-size: 5
 
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
     flyway:
-      enabled: true
+      enabled: ${FLYWAY_ENABLED:true}
       locations: classpath:database/migration
       baseline-on-migrate: true
-
     show-sql: false
     properties:
       hibernate:
@@ -56,10 +59,10 @@ spring:
           time_zone: Asia/Ho_Chi_Minh
 
   mail:
-    host: smtp.gmail.com
-    port: 587
-    username: ${MAIL_USERNAME}
-    password: ${MAIL_PASSWORD}
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:no-reply@startupkit.vn}
+    password: ${MAIL_PASSWORD:mock-password}
     properties:
       mail:
         smtp:
@@ -71,9 +74,9 @@ server:
   port: ${PORT:8080}
 
 jwt:
-  signerKey: ${JWT_SIGNER_KEY}
-  valid-duration: 3600
-  refreshable-duration: 86400
+  signerKey: ${JWT_SIGNER_KEY:startupkit-default-jwt-secret-key-at-least-32-bytes-long-2026-production}
+  valid-duration: ${JWT_VALID_DURATION:3600}
+  refreshable-duration: ${JWT_REFRESHABLE_DURATION:86400}
 
 app:
   oauth2-redirect-uri: ${FRONTEND_URL:https://startup-kit-fe-s7jb.vercel.app}/vi/oauth2/callback
