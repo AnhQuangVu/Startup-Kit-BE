@@ -7,12 +7,20 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 logger = logging.getLogger(__name__)
 
 load_dotenv()
+
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+DEFAULT_SQLITE_PATH = os.path.join(BASE_DIR, "startupkit.db").replace("\\", "/")
+DEFAULT_SQLITE_URL = f"sqlite:///{DEFAULT_SQLITE_PATH}"
+
 RAW_DB_URL = os.getenv("DATABASE_URL")
-DATABASE_URL = RAW_DB_URL if (RAW_DB_URL and RAW_DB_URL.strip()) else "sqlite:///./startupkit.db"
+if RAW_DB_URL and RAW_DB_URL.strip():
+    DATABASE_URL = RAW_DB_URL.strip()
+else:
+    DATABASE_URL = DEFAULT_SQLITE_URL
 
 def init_engine(url: str):
     if not url or not str(url).strip():
-        url = "sqlite:///./startupkit.db"
+        url = DEFAULT_SQLITE_URL
     
     try:
         connect_args = {"check_same_thread": False} if url.startswith("sqlite") else {}
@@ -23,7 +31,7 @@ def init_engine(url: str):
         return eng
     except Exception as e:
         logger.warning("Could not initialize configured database (%s). Falling back to local SQLite.", e)
-        return create_engine("sqlite:///./startupkit.db", connect_args={"check_same_thread": False})
+        return create_engine(DEFAULT_SQLITE_URL, connect_args={"check_same_thread": False})
 
 engine = init_engine(DATABASE_URL)
 
