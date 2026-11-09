@@ -17,7 +17,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: 1440
       - key: DATABASE_URL
-        sync: false
+        value: sqlite:///./startupkit.db
       - key: API_KEY
         sync: false
       - key: BASE_URL
