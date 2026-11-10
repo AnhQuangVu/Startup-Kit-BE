@@ -3,6 +3,15 @@
 -- Password for all demo accounts is '123456'
 -- ========================================================
 
+-- Ensure oauth_code table exists for OAuth2 code exchange flow
+CREATE TABLE IF NOT EXISTS oauth_code (
+    code VARCHAR(255) PRIMARY KEY,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT,
+    expiry_time timestamptz NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE
+);
+
 -- Update all existing users to verified
 UPDATE users SET verified = true WHERE verified IS NOT TRUE;
 
