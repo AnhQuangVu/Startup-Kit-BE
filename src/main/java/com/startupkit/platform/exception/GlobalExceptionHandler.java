@@ -19,6 +19,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(value = RuntimeException.class)
     ResponseEntity<ApiResponse> handlingRuntimeException(RuntimeException exception) {
         log.error("RuntimeException: ", exception);
+        if (exception instanceof AppException appEx) {
+            return handlingAppException(appEx);
+        }
         ApiResponse apiResponse = new ApiResponse();
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
         apiResponse.setMessage(exception.getMessage() != null && !exception.getMessage().isBlank()
