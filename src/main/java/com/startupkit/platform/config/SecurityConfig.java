@@ -106,7 +106,9 @@ public class SecurityConfig {
                 "http://localhost:*",
                 "https://startup-kit-fe.vercel.app",
                 "https://startup-kit-fe-s7jb.vercel.app",
-                "https://*.vercel.app"
+                "https://*.vercel.app",
+                "https://startupkit.com.vn",
+                "https://*.startupkit.com.vn"
         ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));

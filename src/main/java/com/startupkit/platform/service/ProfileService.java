@@ -53,7 +53,12 @@ public class ProfileService {
 
     private StartupProfileResponse getProfileStartup(User user) {
         Startup profile = startupRepo.findByUserId(user.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+                .orElseGet(() -> startupRepo.save(Startup.builder()
+                        .user(user)
+                        .industry("Technology")
+                        .description("Innovative venture on StartupKit")
+                        .teamSize(1)
+                        .build()));
 
 
         CredibilityScore score = profile.getCredibilityScore();
@@ -92,7 +97,11 @@ public class ProfileService {
 
     private MentorProfileResponse getProfileMentor(User user) {
         Mentor profile = mentorRepo.findByUserId(user.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+                .orElseGet(() -> mentorRepo.save(Mentor.builder()
+                        .user(user)
+                        .bio("Advisor on StartupKit")
+                        .expertise("Strategy, Product, Growth")
+                        .build()));
 
         CredibilityScore score = profile.getCredibilityScore();
 
@@ -130,7 +139,15 @@ public class ProfileService {
 
     private InvestorProfileResponse getProfileInvestor(User user) {
         Investor profile = investorRepo.findByUserId(user.getId())
-                .orElseThrow(() -> new AppException(ErrorCode.PROFILE_NOT_FOUND));
+                .orElseGet(() -> investorRepo.save(Investor.builder()
+                        .user(user)
+                        .organizationName("Private Investor")
+                        .bio("Investor on StartupKit")
+                        .investmentCriteria("Seed, Early Stage")
+                        .preferredStages("Seed")
+                        .investmentMin(10000.0)
+                        .investmentMax(250000.0)
+                        .build()));
 
         List<String> criteria = parseToList(profile.getInvestmentCriteria());
         List<String> stages   = parseToList(profile.getPreferredStages());

@@ -6,7 +6,7 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID:mock-google-client-id}
             client-secret: ${GOOGLE_CLIENT_SECRET:mock-google-client-secret}
-            redirect-uri: "${BACKEND_URL:http://localhost:8080}/login/oauth2/code/google"
+            redirect-uri: "${BACKEND_URL:https://startup-kit-be.onrender.com}/login/oauth2/code/google"
             scope:
               - email
               - profile
@@ -81,4 +81,4 @@ jwt:
   refreshable-duration: ${JWT_REFRESHABLE_DURATION:86400}
 
 app:
-  oauth2-redirect-uri: ${FRONTEND_URL:https://startup-kit-fe-s7jb.vercel.app}/vi/oauth2/callback
+  oauth2-redirect-uri: ${FRONTEND_URL:https://startupkit.com.vn}/vi/oauth2/callback
