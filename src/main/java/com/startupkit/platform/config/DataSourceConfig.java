@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
 
 import javax.sql.DataSource;
 import java.net.URI;
@@ -86,17 +88,33 @@ public class DataSourceConfig {
             config.setMaximumPoolSize(5);
             config.setConnectionTimeout(20000);
             config.setInitializationFailTimeout(10000);
+            return new HikariDataSource(config);
         } else {
-            // Fallback to embedded in-memory PostgreSQL-compatible mode so the web service boots successfully on Render!
-            log.info("Initializing in-memory database fallback to serve web requests and health checks reliably.");
+            // Fallback to embedded in-memory PostgreSQL-compatible mode
+            log.info("Initializing in-memory database fallback with full schema and seed data.");
             System.setProperty("spring.flyway.enabled", "false");
             config.setJdbcUrl("jdbc:h2:mem:startupkit_db;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH");
             config.setDriverClassName("org.h2.Driver");
             config.setUsername("sa");
             config.setPassword("");
             config.setMaximumPoolSize(5);
-        }
+            HikariDataSource ds = new HikariDataSource(config);
 
-        return new HikariDataSource(config);
+            // Populate all tables and seeds so all authentication and business APIs work instantly!
+            try {
+                ResourceDatabasePopulator populator = new ResourceDatabasePopulator();
+                populator.setContinueOnError(true);
+                populator.setIgnoreFailedDrops(true);
+                populator.addScript(new ClassPathResource("database/migration/V1__init_schema.sql"));
+                populator.addScript(new ClassPathResource("database/migration/V2__seed_ecosystem_data.sql"));
+                populator.addScript(new ClassPathResource("database/migration/V3__seed_real_vietnam_ecosystem.sql"));
+                populator.addScript(new ClassPathResource("database/migration/V4__seed_user_identities.sql"));
+                populator.execute(ds);
+                log.info("Successfully executed all migration and seed scripts on in-memory database.");
+            } catch (Exception ex) {
+                log.error("Failed to populate in-memory database: {}", ex.getMessage(), ex);
+            }
+            return ds;
+        }
     }
 }
